@@ -1,0 +1,10 @@
+# Ignore all files
+acme
+node_modules
+private
+public
+yarn-error.log
+.env
+
+# Whitelist .env-example
+!private/.env-example
