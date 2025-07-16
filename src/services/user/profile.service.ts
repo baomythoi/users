@@ -42,6 +42,7 @@ export default new class UserProfile extends BaseService {
         })
         .select(
           'user.id',
+          'user.uid',
           'user.fullname',
           'user.username',
           'user.password',
