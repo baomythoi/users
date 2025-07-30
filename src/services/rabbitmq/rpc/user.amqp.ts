@@ -24,7 +24,6 @@ import {
 // service
 import UserProfile from '@services/user/profile.service';
 import CollaboratorService from '@services/user/collaborator.service';
-import UserBH365 from '@services/user/bh365.service';
 import AddressService from '@services/user/address.service';
 
 export default class UserPortalAmqp {
@@ -194,13 +193,6 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await CollaboratorService.getAllUnder(request.params);
-
-      case 'rpc.users.bh365_create.routing':
-        isValid = await this.common.validate.compile(request.params, BH365CreateUserSchema);
-        if (!isValid.success)
-          return isValid;
-
-        return await UserBH365.create(request.params);
 
       case 'rpc.users.get_provinces.routing':
         isValid = await this.common.validate.compile(request.params, GetProvincesSchema);

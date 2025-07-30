@@ -29,9 +29,10 @@ export default class UserModel extends BaseModel {
   }
 
   $beforeUpdate(opt: ModelOptions, queryContext: QueryContext): Promise<any> | void {
-    this.updatedDate = Moment.init().format('YYYY-MM-DD HH:mm:ss');
+    this.updatedAt = Moment.init().format('YYYY-MM-DD HH:mm:ss');
   }
 
+  uid!: string;
   id!: number;
   username!: string;
   password?: string;
@@ -41,20 +42,11 @@ export default class UserModel extends BaseModel {
   phoneNumber!: string;
   email!: string;
   gender!: number;
-  saleLevelId!: number;
-  masterMerchantId!: number;
-  merchantId!: number;
-  agencyId!: number;
   avatar!: string;
-  referralCode!: string;
-  saleWallet!: number;
-  wallet!: number;
-  reward!: number;
-  internalWallet!: number;
   extraInfo!: Record<string, any>;
   status!: number;
-  createdDate!: string;
-  updatedDate!: string;
+  createdAt!: string;             // Thời gian tạo bản ghi
+  updatedAt!: string;             // Thời gian cập nhật bản ghi gần nhất
 
   /** optional key */
   saleLevelTitle?: string;
@@ -62,8 +54,9 @@ export default class UserModel extends BaseModel {
   static get jsonSchema() {
     return {
       type: 'object',
-      required: ['username', 'password', 'roleId', 'saleLevelId', 'status', 'createdDate'],
+      required: ['username', 'password', 'roleId', 'status', 'createdAt'],
       properties: {
+        uid: { type: 'string' },
         id: { type: 'number' },
         username: { type: 'string' },
         password: { type: 'string' },
@@ -73,23 +66,14 @@ export default class UserModel extends BaseModel {
         phoneNumber: { type: 'string' },
         email: { type: 'string' },
         gender: { type: 'number' },
-        saleLevelId: { type: 'number' },
-        masterMerchantId: { type: 'number' },
-        merchantId: { type: 'number' },
-        agencyId: { type: 'number' },
         avatar: { type: 'string' },
-        referralCode: { type: 'string' },
-        saleWallet: { type: 'number' },
-        wallet: { type: 'number' },
-        reward: { type: 'number' },
-        internalWallet: { type: 'number' },
         extraInfo: { type: 'object' },
         status: {
           type: 'number',
           enum: [0, 1]
         },
-        createdDate: { type: 'string' },
-        updatedDate: { type: 'string' }
+        createdAt: { type: 'string' },
+        updatedAt: { type: 'string' }
       }
     }
   }

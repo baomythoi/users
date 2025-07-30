@@ -49,9 +49,6 @@ export default new class UserProfile extends BaseService {
           'user.avatar',
           'user.phoneNumber',
           'user.email',
-          'user.wallet',
-          'user.reward',
-          'user.internalWallet',
           'user.roleId',
         )
         .select(UserReplicaModel.raw(`
@@ -128,10 +125,8 @@ export default new class UserProfile extends BaseService {
           password: hashSync(params.password, 10),
           roleId: 3,
           phoneNumber: params.phoneNumber,
-          referralCode: params.phoneNumber,
-          saleLevelId: 8,
           status: 1,
-          createdDate: this.common.moment.init().format()
+          createdAt: this.common.moment.init().format()
         }
 
         const insertResult = await UserModel.query(trx)

@@ -126,7 +126,6 @@ export interface RegGSaleAccountParams {
   password: string;
   roleId?: number;
   phoneNumber?: string;
-  referralCode?: string;
 }
 
 export interface UserDailyRevenueData {

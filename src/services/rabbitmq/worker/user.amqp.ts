@@ -3,7 +3,6 @@ import { Channel } from 'amqplib';
 
 // service
 import CollaboratorService from '@services/user/collaborator.service';
-import UserLevelReviewService from '@services/user-level-life-cycle/level-review.service';
 
 // interface
 import { RequestParams } from '@interfaces/rabbitmq';
@@ -119,22 +118,6 @@ export default class UserWorker {
     switch (routingKey) {
       case 'worker.users.create_collaborator_contract.routing':
         CollaboratorService.createContract(request.params);
-        break;
-
-      case 'worker.users.level_upgrade_review.routing':
-        UserLevelReviewService.reviewUpgrade();
-        break;
-
-      case 'worker.users.change_parent_after_review.routing':
-        UserLevelReviewService.processChangeParent();
-        break;
-
-      case 'worker.users.level_downgrade_review.routing':
-        UserLevelReviewService.reviewDowngrade();
-        break;
-
-      case 'worker.users.level_review_notify.routing':
-        UserLevelReviewService.sendNotifyToUser();
         break;
     }
   }

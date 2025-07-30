@@ -68,7 +68,7 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
   type: 'object',
   required: ['password', 'username'],
   properties: {
-    username: { type: 'string', minLength: 10, maxLength: 11 },
+    username: { type: 'string', minLength: 10, maxLength: 32 },
     password: { type: 'string', minLength: 8, maxLength: 50 },
     roleId: {
       type: 'number',
@@ -76,12 +76,6 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
       nullable: true
     },
     phoneNumber: {
-      type: 'string',
-      minLength: 10,
-      maxLength: 11,
-      nullable: true
-    },
-    referralCode: {
       type: 'string',
       minLength: 10,
       maxLength: 11,
