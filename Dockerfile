@@ -1,31 +1,42 @@
-# Use the official Node.js image from the Docker Hub
-FROM node:20.14.0
+# Base image
+FROM node:20.14.0 AS builder
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and yarn.lock to the working directory
+# Copy package files
 COPY package.json yarn.lock ./
 
-# Install dependencies using Yarn
-RUN yarn install
+# Install dependencies
+RUN yarn install --frozen-lockfile
 
-# Copy the rest of the application code to the working directory
+# Copy source code
 COPY . .
 
-# Build the application (if needed)
+# Build TypeScript
 RUN yarn build
 
-# Specify the directory containing the build output (adjust as per your application)
-ARG BUILD_DIR=./acme
 
-# Copy built files into the container
-COPY ${BUILD_DIR} ./acme
+# -----------------------------
+# Production image
+FROM node:20.14.0 AS runner
 
-# Expose the port the app runs on
-ARG PORT=9003
+WORKDIR /usr/src/app
+
+# Copy only needed files from builder
+COPY --from=builder /usr/src/app/package.json ./
+COPY --from=builder /usr/src/app/yarn.lock ./
+COPY --from=builder /usr/src/app/acme ./acme
+
+# Install only production dependencies
+RUN yarn install --frozen-lockfile --production
+
+# Set environment variables
+ARG PORT=9203
 ENV PORT=${PORT}
-# EXPOSE ${PORT}
 
-# Define the command to run the app
+# Expose port
+EXPOSE ${PORT}
+
+# Run app with yarn start (node ./acme/src/index.js)
 CMD ["yarn", "start"]
