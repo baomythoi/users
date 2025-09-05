@@ -18,29 +18,26 @@ const config: { [key: string]: Knex.Config } = {
       charset: process.env.DATABASE_CHARSET,
     },
     pool: {
-      min: 30,
-      max: 100,
-      acquireTimeoutMillis: 30_000,  // 30 seconds
-      createTimeoutMillis: 10_000,  // 10 seconds
-      idleTimeoutMillis: 300_000,  // 5 minutes
-      reapIntervalMillis: 10_000,  // 10 seconds
-      createRetryIntervalMillis: 2000,  // 2 seconds
-      propagateCreateError: false,
+      min: 5,
+      max: 30,
+      acquireTimeoutMillis: 20_000,   // 20s chờ acquire connection
+      createTimeoutMillis: 10_000,    // 10s tạo connection
+      idleTimeoutMillis: 300_000,     // 5 phút idle thì release
+      reapIntervalMillis: 10_000,     // 10s dọn pool
+      createRetryIntervalMillis: 2000 // 2s retry nếu tạo connection fail
     },
     searchPath: ['knex', 'public'],
-    migrations: {
-      tableName: "knex_migrations"
-    },
+    migrations: { tableName: "knex_migrations" },
     debug: true,
     log: {
       debug: (message) => {
         const { sql, bindings } = message;
-
         console.info(sql, bindings);
       }
     },
     ...knexSnakeCaseMappers()
   },
+
   productionWrite: {
     client: "pg",
     connection: {
@@ -52,21 +49,20 @@ const config: { [key: string]: Knex.Config } = {
       charset: process.env.DATABASE_CHARSET,
     },
     pool: {
-      min: 10,
-      max: 30,
-      acquireTimeoutMillis: 10_000, // 10 seconds timeout for acquiring connections
-      createTimeoutMillis: 10_000,  // 10 seconds timeout for creating connections
-      idleTimeoutMillis: 300_000,   // 5 minutes idle timeout
-      reapIntervalMillis: 5_000,    // 5 seconds cleanup interval
-      createRetryIntervalMillis: 1000, // 1 second retry interval for creating connections
+      min: 5,
+      max: 20,                        // nhỏ hơn dev, tránh quá tải DB
+      acquireTimeoutMillis: 20_000,   // tăng lên 20s để giảm lỗi acquire
+      createTimeoutMillis: 10_000,
+      idleTimeoutMillis: 300_000,
+      reapIntervalMillis: 10_000,
+      createRetryIntervalMillis: 2000
     },
-    asyncStackTraces: true, // Helpful for debugging
+    asyncStackTraces: true,
     searchPath: ['knex', 'public'],
-    migrations: {
-      tableName: "knex_migrations"
-    },
+    migrations: { tableName: "knex_migrations" },
     ...knexSnakeCaseMappers()
   },
+
   productionRead: {
     client: "pg",
     connection: {
@@ -78,19 +74,17 @@ const config: { [key: string]: Knex.Config } = {
       charset: process.env.DATABASE_REPLICA_CHARSET,
     },
     pool: {
-      min: 10,
-      max: 30,
-      acquireTimeoutMillis: 10_000, // 10 seconds timeout for acquiring connections
-      createTimeoutMillis: 10_000,  // 10 seconds timeout for creating connections
-      idleTimeoutMillis: 300_000,   // 5 minutes idle timeout
-      reapIntervalMillis: 5_000,    // 5 seconds cleanup interval
-      createRetryIntervalMillis: 1000, // 1 second retry interval for creating connections
+      min: 5,
+      max: 20,                        // giống write để cân bằng tải
+      acquireTimeoutMillis: 20_000,
+      createTimeoutMillis: 10_000,
+      idleTimeoutMillis: 300_000,
+      reapIntervalMillis: 10_000,
+      createRetryIntervalMillis: 2000
     },
-    asyncStackTraces: true, // Helpful for debugging
+    asyncStackTraces: true,
     searchPath: ['knex', 'public'],
-    migrations: {
-      tableName: "knex_migrations"
-    },
+    migrations: { tableName: "knex_migrations" },
     ...knexSnakeCaseMappers()
   },
 };
