@@ -16,8 +16,8 @@ export default new class KnexConfig {
         break;
 
       default:
-        this.knexWriteInstance = Knex(knexConfig.developmentWrite);
-        this.knexReadInstance = Knex(knexConfig.developmentRead);
+        this.knexWriteInstance = Knex(knexConfig.development);
+        this.knexReadInstance = Knex(knexConfig.development);
         break;
     }
   }
@@ -29,8 +29,8 @@ export default new class KnexConfig {
 
       setInterval(async () => {
         try {
-          await this.knexWriteInstance.raw('SELECT 1').timeout(5000); // 5s
-          await this.knexReadInstance.raw('SELECT 2').timeout(5000);
+          await this.knexWriteInstance.raw('SELECT 1');
+          await this.knexReadInstance.raw('SELECT 2');
         } catch (err) {
           console.error('Database ping failed:', err);
         }
