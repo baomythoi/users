@@ -13,18 +13,6 @@ export default class UserModel extends BaseModel {
     if (json.id)
       json.id = parseInt(json.id, 10);
 
-    if (json.wallet)
-      json.wallet = parseInt(json.wallet, 10);
-
-    if (json.reward)
-      json.reward = parseInt(json.reward, 10);
-
-    if (json.internalWallet)
-      json.internalWallet = parseInt(json.internalWallet, 10);
-
-    if (json.parentId)
-      json.parentId = parseInt(json.parentId, 10);
-
     return json;
   }
 
@@ -39,10 +27,12 @@ export default class UserModel extends BaseModel {
   roleId!: number;
   fullname!: string;
   privateId!: string;
+  phoneCode!: string;
   phoneNumber!: string;
   email!: string;
   gender!: number;
   avatar!: string;
+  locale!: string;
   extraInfo!: Record<string, any>;
   status!: number;
   createdAt!: string;             // Thời gian tạo bản ghi
@@ -67,6 +57,7 @@ export default class UserModel extends BaseModel {
         email: { type: 'string' },
         gender: { type: 'number' },
         avatar: { type: 'string' },
+        locale: { type: 'string' },
         extraInfo: { type: 'object' },
         status: {
           type: 'number',

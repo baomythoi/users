@@ -50,9 +50,9 @@ export default new class UserProfile extends BaseService {
           'user.phoneNumber',
           'user.email',
           'user.roleId',
+          'user.locale',
         )
         .select(UserReplicaModel.raw(`
-          COALESCE("user".extra_info ->> 'dob', '') AS dob,
           "user".extra_info ->> 'secretKey' AS "secretKey"
         `))
         .first();
