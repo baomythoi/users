@@ -11,7 +11,6 @@ export interface ProfileParams {
 export interface EditUserProfileParams {
   fullname?: string;
   phoneNumber?: string;
-  email?: string;
   avatar?: string;
   internalWallet?: number;
   reward?: number;
@@ -126,6 +125,7 @@ export interface RegGSaleAccountParams {
   password: string;
   roleId?: number;
   phoneNumber?: string;
+  locale?: string;
 }
 
 export interface UserDailyRevenueData {

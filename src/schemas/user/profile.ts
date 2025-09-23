@@ -81,6 +81,7 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
       maxLength: 11,
       nullable: true
     },
+    locale: { type: 'string', enum: ['en', 'vi'], nullable: true }
   },
   additionalProperties: false
 }

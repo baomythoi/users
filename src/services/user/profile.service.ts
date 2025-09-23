@@ -85,6 +85,7 @@ export default new class UserProfile extends BaseService {
           throw new CustomError(this.errorCodes.NOT_FOUND);
 
         const extraInfo = detail.extraInfo;
+        
         if (params.dob) {
           Object.assign(extraInfo, {
             dob: params.dob
@@ -111,37 +112,42 @@ export default new class UserProfile extends BaseService {
 
   async register(params: RegGSaleAccountParams): Promise<FuncResponse<object>> {
     try {
-      await UserModel.transaction(async (trx) => {
+      const result = await UserModel.transaction(async (trx) => {
         const isExist = await UserModel.query(trx)
           .where('username', params.username)
           .where('status', 1)
           .first();
 
-        if (isExist instanceof UserModel)
+        if (isExist)
           throw new CustomError(this.errorCodes.CONFLICT);
 
-        const dataInsert = {
-          username: params.username,
-          password: hashSync(params.password, 10),
-          roleId: 3,
-          phoneNumber: params.phoneNumber,
-          status: 1,
-          createdAt: this.common.moment.init().format()
-        }
-
         const insertResult = await UserModel.query(trx)
-          .insert(dataInsert);
+          .insert({
+            username: params.username,
+            password: hashSync(params.password, 10),
+            roleId: 3,
+            phoneNumber: params.phoneNumber,
+            email: params.username,
+            status: 1,
+            locale: params.locale || 'en',
+            createdAt: this.common.moment.init().format()
+          })
+          .returning(['id', 'uid']);
 
         await UserModel.query(trx)
           .patch({
             extraInfo: {
-              secretKey: `${insertResult.id}${this.common.nanoid.generateRandomId(16 - insertResult.id.toString().length)}`
-            }
+              secretKey: `${insertResult.id}${this.common.nanoid.generateRandomId(
+                16 - insertResult.id.toString().length
+              )}`,
+            },
           })
-          .where('id', insertResult.id)
+          .where('id', insertResult.id);
+
+        return insertResult.uid;
       });
 
-      return this.responseSuccess();
+      return this.responseSuccess({ userUid: result });
     } catch (error: any) {
       return this.responseError(error);
     }
