@@ -25,19 +25,15 @@ export const ProfileSchema: JSONSchemaType<ProfileParams> = {
 
 export const EditUserProfileSchema: JSONSchemaType<EditUserProfileParams> = {
   type: 'object',
+  required: [],
   properties: {
-    fullname: { type: 'string', nullable: true },
-    phoneNumber: { type: 'string', nullable: true },
-    email: { type: 'string', nullable: true },
-    avatar: { type: 'string', nullable: true },
-    internalWallet: { type: 'number', nullable: true },
-    reward: { type: 'number', nullable: true },
-    gender: { type: 'number', nullable: true },
-    dob: {
-      type: 'string',
-      pattern: '^(\\d{2})/(\\d{2})/(\\d{4})$',
-      nullable: true
-    }
+    phoneCode: { type: 'string', nullable: true },
+    phoneNumber: { type: 'string', minLength: 8, maxLength: 10, nullable: true },
+    fullname: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
+    avatar: { type: 'string', minLength: 1, nullable: true },
+    gender: { type: 'string', enum: ['M', 'F'], nullable: true },
+    locale: { type: 'string', minLength: 2, maxLength: 10, nullable: true },
+    password: { type: 'string', minLength: 8, maxLength: 50, nullable: true },
   },
   additionalProperties: false
 }
@@ -77,7 +73,7 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
     },
     phoneNumber: {
       type: 'string',
-      minLength: 10,
+      minLength: 8,
       maxLength: 11,
       nullable: true
     },

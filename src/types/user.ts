@@ -9,13 +9,13 @@ export interface ProfileParams {
 }
 
 export interface EditUserProfileParams {
-  fullname?: string;
+  phoneCode?: string;
   phoneNumber?: string;
+  fullname?: string;
   avatar?: string;
-  internalWallet?: number;
-  reward?: number;
-  gender?: number;
-  dob?: string;
+  gender?: 'M' | 'F';
+  locale?: string;
+  password?: string;
 }
 
 export interface BH365CreateUserParams {

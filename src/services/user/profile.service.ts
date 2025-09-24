@@ -8,7 +8,6 @@ import {
   ProfileParams,
   EditUserProfileParams,
   RegGSaleAccountParams,
-  UserData
 } from '@interfaces/user';
 
 // model
@@ -47,6 +46,7 @@ export default new class UserProfile extends BaseService {
           'user.username',
           'user.password',
           'user.avatar',
+          'user.phoneCode',
           'user.phoneNumber',
           'user.email',
           'user.roleId',
@@ -76,30 +76,24 @@ export default new class UserProfile extends BaseService {
 
   async edit(params: EditUserProfileParams, authentication: { username: string }): Promise<FuncResponse<object>> {
     try {
-      await UserModel.transaction(async (trx) => {
-        await trx.raw('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+      const detail = await UserModel.query().findOne('username', authentication.username);
 
-        const detail = await UserModel.query(trx)
-          .findOne('username', authentication.username);
-        if (!(detail instanceof UserModel))
-          throw new CustomError(this.errorCodes.NOT_FOUND);
+      if (!detail)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
 
-        const extraInfo = detail.extraInfo;
+
         
-        if (params.dob) {
-          Object.assign(extraInfo, {
-            dob: params.dob
-          })
-          delete params.dob;
-        }
-
-        await UserModel.query(trx)
-          .patch({
-            ...params,
-            extraInfo
-          })
-          .where('username', authentication.username);
-      });
+      await UserModel.query()
+        .patch({
+          phoneCode: params.phoneCode,
+          phoneNumber: params.phoneNumber,
+          fullname: params.fullname,
+          avatar: params.avatar,
+          gender: params.gender === 'M' ? 1 : 2,
+          locale: params.locale,
+          password: params.password ? hashSync(params.password, 10) : undefined,
+        })
+        .where('uid', detail.uid);
 
       // clear cache
       await this.common.redis.clearCache(`users:${authentication.username}:open-api:profile`);
