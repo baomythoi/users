@@ -21,6 +21,12 @@ export default new class UserProfile extends BaseService {
 
   async get(params: ProfileParams): Promise<FuncResponse<object>> {
     try {
+      const cacheKey = `users:${params.username}:open-api:profile`;
+      const cachedData = await this.common.redis.getCache(cacheKey);
+
+      if (cachedData)
+        return this.responseSuccess(JSON.parse(cachedData));
+
       const detail = await UserReplicaModel.query()
         .alias('user')
         .modify((queryBuilder) => {
@@ -61,14 +67,14 @@ export default new class UserProfile extends BaseService {
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
       if (params.ignorePassword)
-        delete detail['password']
+        delete detail['password'];
 
       await this.common.redis.addCache({
-        key: `users:${detail.username}:open-api:profile`,
+        key: cacheKey,
         value: JSON.stringify(detail)
-      }, 60 * 60 * 24 * 30); // hieu luc trong 30 ngay
+      }, 60 * 60 * 24 * 30); // Cache valid for 30 days
 
-      return this.responseSuccess(detail)
+      return this.responseSuccess(detail);
     } catch (error: any) {
       return this.responseError(error);
     }
@@ -81,8 +87,6 @@ export default new class UserProfile extends BaseService {
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
-
-        
       await UserModel.query()
         .patch({
           phoneCode: params.phoneCode,
