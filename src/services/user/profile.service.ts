@@ -25,7 +25,7 @@ export default new class UserProfile extends BaseService {
       const cachedData = await this.common.redis.getCache(cacheKey);
 
       if (cachedData)
-        return this.responseSuccess(JSON.parse(cachedData));
+        return this.responseSuccess(cachedData);
 
       const detail = await UserReplicaModel.query()
         .alias('user')
