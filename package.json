@@ -13,7 +13,7 @@
     "migrate:reset": "ts-node -r tsconfig-paths/register ./node_modules/knex/bin/cli.js migrate:rollback --all --knexfile knexfile.ts --env development && ts-node -r tsconfig-paths/register ./node_modules/knex/bin/cli.js migrate:latest --knexfile knexfile.ts --env development"
   },
   "engines": {
-    "node": ">=12.9.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@fastify/autoload": "^5.7.1",
