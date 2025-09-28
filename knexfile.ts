@@ -66,12 +66,12 @@ const config: { [key: string]: Knex.Config } = {
   productionRead: {
     client: "pg",
     connection: {
-      host: process.env.DATABASE_REPLICA_HOST,
-      port: parseInt(process.env.DATABASE_REPLICA_PORT as string),
-      user: process.env.DATABASE_REPLICA_USER,
-      password: process.env.DATABASE_REPLICA_PASSWORD,
-      database: process.env.DATABASE_REPLICA_NAME,
-      charset: process.env.DATABASE_REPLICA_CHARSET,
+      host: process.env.DATABASE_HOST,
+      port: parseInt(process.env.DATABASE_PORT as string),
+      user: process.env.DATABASE_USER,
+      password: process.env.DATABASE_PASSWORD,
+      database: process.env.DATABASE_NAME,
+      charset: process.env.DATABASE_CHARSET,
     },
     pool: {
       min: 5,
