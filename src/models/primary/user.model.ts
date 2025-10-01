@@ -34,7 +34,7 @@ export default class UserModel extends BaseModel {
   avatar!: string;
   locale!: string;
   extraInfo!: Record<string, any>;
-  status!: number;
+  status!: number; // 0: inactive, 1: active, 2: pending
   createdAt!: string;             // Thời gian tạo bản ghi
   updatedAt!: string;             // Thời gian cập nhật bản ghi gần nhất
 
@@ -62,7 +62,7 @@ export default class UserModel extends BaseModel {
         extraInfo: { type: 'object' },
         status: {
           type: 'number',
-          enum: [0, 1]
+          enum: [0, 1, 2]
         },
         createdAt: { type: 'string' },
         updatedAt: { type: 'string' }

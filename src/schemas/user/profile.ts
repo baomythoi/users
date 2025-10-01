@@ -6,6 +6,7 @@ import {
   ChangePasswordParams,
   RegGSaleAccountParams,
   GetAffUserByRoleParams,
+  ActiveUserParams,
 } from '@interfaces/user';
 
 export const ProfileSchema: JSONSchemaType<ProfileParams> = {
@@ -92,6 +93,15 @@ export const GetAffUserByRoleSchema: JSONSchemaType<GetAffUserByRoleParams> = {
         type: 'string',
       }
     },
+  },
+  additionalProperties: false
+}
+
+export const ActiveUserSchema: JSONSchemaType<ActiveUserParams> = {
+  type: 'object',
+  required: ['username'],
+  properties: {
+    username: { type: 'string', minLength: 3 },
   },
   additionalProperties: false
 }

@@ -8,6 +8,7 @@ import {
   ProfileParams,
   EditUserProfileParams,
   RegGSaleAccountParams,
+  ActiveUserParams,
 } from '@interfaces/user';
 
 // model
@@ -51,6 +52,7 @@ export default new class UserProfile extends BaseService {
           'user.email',
           'user.roleId',
           'user.locale',
+          'user.status',
         )
         .select(UserReplicaModel.raw(`
           "user".extra_info ->> 'secretKey' AS "secretKey"
@@ -107,7 +109,6 @@ export default new class UserProfile extends BaseService {
       const result = await UserModel.transaction(async (trx) => {
         const isExist = await UserModel.query(trx)
           .where('username', params.username)
-          .where('status', 1)
           .first();
 
         if (isExist)
@@ -120,7 +121,7 @@ export default new class UserProfile extends BaseService {
             roleId: 3,
             phoneNumber: params.phoneNumber,
             email: params.username,
-            status: 1,
+            status: 2,
             locale: params.locale || 'en',
             createdAt: this.common.moment.init().format()
           })
@@ -140,6 +141,29 @@ export default new class UserProfile extends BaseService {
       });
 
       return this.responseSuccess({ userUid: result });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async activeUser(params: ActiveUserParams): Promise<FuncResponse<object>> {
+    try {
+      const detail = await UserModel.query()
+        .where('username', params.username)
+        .where('status', 2)
+        .first();
+
+      if (!detail)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
+
+      await UserModel.query()
+        .patch({ status: 1 })
+        .where('uid', detail.uid);
+
+      // clear cache
+      await this.common.redis.clearCache(`users:${params.username}:open-api:profile`);
+
+      return this.responseSuccess();
     } catch (error: any) {
       return this.responseError(error);
     }

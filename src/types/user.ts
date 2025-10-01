@@ -136,3 +136,7 @@ export interface UserDailyRevenueData {
 export interface GetAffUserByRoleParams {
   roleCodes: string[];
 }
+
+export interface ActiveUserParams {
+  username: string;
+}

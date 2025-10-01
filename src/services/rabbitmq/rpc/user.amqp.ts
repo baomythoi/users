@@ -9,13 +9,13 @@ import { RequestParams } from '@interfaces/rabbitmq';
 import {
   ProfileSchema,
   EditUserProfileSchema,
-  RegGSaleAccountSchema
+  RegGSaleAccountSchema,
+  ActiveUserSchema
 } from '@schemas/user/profile';
 import {
   FindAllSchema,
   ActiveSchema
 } from '@schemas/user/collaborator';
-import { BH365CreateUserSchema } from '@schemas/user/bh365';
 import {
   GetProvincesSchema,
   GetDistrictsSchema
@@ -221,6 +221,13 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await CollaboratorService.active(request.params);
+
+      case 'rpc.users.activate.routing':
+        isValid = await this.common.validate.compile(request.params, ActiveUserSchema);
+        if (!isValid.success)
+          return isValid;
+
+        return await UserProfile.activeUser(request.params);
 
       default:
         return {
