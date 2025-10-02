@@ -123,9 +123,11 @@ export interface GetDistrictsParams {
 export interface RegGSaleAccountParams {
   username: string;
   password: string;
+  fullname: string;
   roleId?: number;
-  phoneNumber?: string;
-  locale?: string;
+  phoneCode: string;
+  phoneNumber: string;
+  locale: string;
 }
 
 export interface UserDailyRevenueData {

@@ -63,7 +63,7 @@ export const ChangePasswordSchema: JSONSchemaType<ChangePasswordParams> = {
 
 export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
   type: 'object',
-  required: ['password', 'username'],
+  required: ['password', 'username', 'phoneCode', 'phoneNumber', 'fullname', 'locale'],
   properties: {
     username: { type: 'string', minLength: 10, maxLength: 32 },
     password: { type: 'string', minLength: 8, maxLength: 50 },
@@ -76,9 +76,10 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
       type: 'string',
       minLength: 8,
       maxLength: 11,
-      nullable: true
     },
-    locale: { type: 'string', enum: ['en', 'vi'], nullable: true }
+    locale: { type: 'string', enum: ['en', 'vi'] },
+    fullname: { type: 'string', minLength: 1, maxLength: 255 },
+    phoneCode: { type: 'string', minLength: 1, maxLength: 5 },
   },
   additionalProperties: false
 }

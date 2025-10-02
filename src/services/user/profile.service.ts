@@ -119,11 +119,13 @@ export default new class UserProfile extends BaseService {
             username: params.username,
             password: hashSync(params.password, 10),
             roleId: 3,
+            fullname: params.fullname,
+            phoneCode: params.phoneCode,
             phoneNumber: params.phoneNumber,
             email: params.username,
             status: 2,
             locale: params.locale || 'en',
-            createdAt: this.common.moment.init().format()
+            createdAt: this.common.moment.init().format(),
           })
           .returning(['id', 'uid']);
 
