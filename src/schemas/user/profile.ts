@@ -7,6 +7,7 @@ import {
   RegGSaleAccountParams,
   GetAffUserByRoleParams,
   ActiveUserParams,
+  ChangeUserPasswordParams,
 } from '@interfaces/user';
 
 export const ProfileSchema: JSONSchemaType<ProfileParams> = {
@@ -103,6 +104,16 @@ export const ActiveUserSchema: JSONSchemaType<ActiveUserParams> = {
   required: ['username'],
   properties: {
     username: { type: 'string', minLength: 3 },
+  },
+  additionalProperties: false
+}
+
+export const ChangeUserPasswordSchema: JSONSchemaType<ChangeUserPasswordParams> = {
+  type: 'object',
+  required: ['username', 'newPassword'],
+  properties: {
+    username: { type: 'string',  minLength: 10 },
+    newPassword: { type: 'string', minLength: 8 },
   },
   additionalProperties: false
 }

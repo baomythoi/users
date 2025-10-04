@@ -10,7 +10,8 @@ import {
   ProfileSchema,
   EditUserProfileSchema,
   RegGSaleAccountSchema,
-  ActiveUserSchema
+  ActiveUserSchema,
+  ChangeUserPasswordSchema
 } from '@schemas/user/profile';
 import {
   FindAllSchema,
@@ -228,6 +229,13 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await UserProfile.activeUser(request.params);
+
+      case 'rpc.users.change_password.routing':
+        isValid = await this.common.validate.compile(request.params, ChangeUserPasswordSchema);
+        if (!isValid.success)
+          return isValid;
+
+        return await UserProfile.changeUserPassword(request.params);
 
       default:
         return {

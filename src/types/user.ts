@@ -142,3 +142,8 @@ export interface GetAffUserByRoleParams {
 export interface ActiveUserParams {
   username: string;
 }
+
+export interface ChangeUserPasswordParams {
+  username: string;
+  newPassword: string;
+}

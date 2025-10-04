@@ -9,6 +9,7 @@ import {
   EditUserProfileParams,
   RegGSaleAccountParams,
   ActiveUserParams,
+  ChangeUserPasswordParams,
 } from '@interfaces/user';
 
 // model
@@ -160,6 +161,28 @@ export default new class UserProfile extends BaseService {
 
       await UserModel.query()
         .patch({ status: 1 })
+        .where('uid', detail.uid);
+
+      // clear cache
+      await this.common.redis.clearCache(`users:${params.username}:open-api:profile`);
+
+      return this.responseSuccess();
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async changeUserPassword(params: ChangeUserPasswordParams): Promise<FuncResponse<object>> {
+    try {
+      const detail = await UserModel.query()
+        .where('username', params.username)
+        .first();
+
+      if (!detail)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
+
+      await UserModel.query()
+        .patch({ password: hashSync(params.newPassword, 10) })
         .where('uid', detail.uid);
 
       // clear cache
