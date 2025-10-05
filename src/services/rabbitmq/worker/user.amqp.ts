@@ -2,7 +2,6 @@ import BaseCommon from '@core/base.common';
 import { Channel } from 'amqplib';
 
 // service
-import CollaboratorService from '@services/user/collaborator.service';
 
 // interface
 import { RequestParams } from '@interfaces/rabbitmq';
@@ -117,7 +116,7 @@ export default class UserWorker {
   processMessage(routingKey: string, request: RequestParams): void {
     switch (routingKey) {
       case 'worker.users.create_collaborator_contract.routing':
-        CollaboratorService.createContract(request.params);
+        // CollaboratorService.createContract(request.params);
         break;
     }
   }

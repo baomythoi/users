@@ -3,7 +3,6 @@ import RabbitMQ from '@utils/rabbitmq';
 
 // rpc service
 import UserAmqp from '@services/rabbitmq/rpc/user.amqp';
-import UserAffiliateAmqp from '@services/rabbitmq/rpc/user-affiliate.amqp';
 import UserPortalAmqp from '@services/rabbitmq/rpc/user-portal.amqp';
 
 // worker service
@@ -56,7 +55,6 @@ export default class RabbitMQService {
     /** init amqp */
     await Promise.allSettled([
       new UserAmqp(this.channelWrapper).init(this.exchange, this.dlExchange),
-      new UserAffiliateAmqp(this.channelWrapper).init(this.exchange, this.dlExchange),
       new UserPortalAmqp(this.channelWrapper).init(this.exchange, this.dlExchange),
     ])
   }

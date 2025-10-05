@@ -14,17 +14,12 @@ import {
   ChangeUserPasswordSchema
 } from '@schemas/user/profile';
 import {
-  FindAllSchema,
-  ActiveSchema
-} from '@schemas/user/collaborator';
-import {
   GetProvincesSchema,
   GetDistrictsSchema
 } from '@schemas/user/address.schema';
 
 // service
 import UserProfile from '@services/user/profile.service';
-import CollaboratorService from '@services/user/collaborator.service';
 import AddressService from '@services/user/address.service';
 
 export default class UserPortalAmqp {
@@ -181,20 +176,6 @@ export default class UserPortalAmqp {
 
         return await UserProfile.edit(request.params, request.authentication);
 
-      case 'rpc.users.get_direct_collaborators.routing':
-        isValid = await this.common.validate.compile(request.params, FindAllSchema);
-        if (!isValid.success)
-          return isValid;
-
-        return await CollaboratorService.getAllDirect(request.params);
-
-      case 'rpc.users.get_under_collaborators.routing':
-        isValid = await this.common.validate.compile(request.params, FindAllSchema);
-        if (!isValid.success)
-          return isValid;
-
-        return await CollaboratorService.getAllUnder(request.params);
-
       case 'rpc.users.get_provinces.routing':
         isValid = await this.common.validate.compile(request.params, GetProvincesSchema);
         if (!isValid.success)
@@ -215,13 +196,6 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await UserProfile.register(request.params);
-
-      case 'rpc.users.gsale_active_collaborator.routing':
-        isValid = await this.common.validate.compile(request.params, ActiveSchema);
-        if (!isValid.success)
-          return isValid;
-
-        return await CollaboratorService.active(request.params);
 
       case 'rpc.users.activate.routing':
         isValid = await this.common.validate.compile(request.params, ActiveUserSchema);
