@@ -33,4 +33,8 @@ export default class BaseCommon {
   static formatMoneyWithDot(money: number) {
     return new Intl.NumberFormat('vi-VN').format(money);
   }
+
+  static getFullName(firstName: string, middleName?: string, lastName?: string): string {
+    return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+  }
 }

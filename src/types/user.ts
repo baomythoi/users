@@ -11,7 +11,9 @@ export interface ProfileParams {
 export interface EditUserProfileParams {
   phoneCode?: string;
   phoneNumber?: string;
-  fullname?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
   avatar?: string;
   gender?: 'M' | 'F';
   locale?: string;
@@ -123,7 +125,9 @@ export interface GetDistrictsParams {
 export interface RegGSaleAccountParams {
   username: string;
   password: string;
-  fullname: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
   roleId?: number;
   phoneCode: string;
   phoneNumber: string;

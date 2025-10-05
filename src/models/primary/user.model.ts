@@ -25,7 +25,9 @@ export default class UserModel extends BaseModel {
   username!: string;
   password?: string;
   roleId!: number;
-  fullname!: string;
+  firstName!: string;
+  lastName!: string;
+  middleName?: string;
   privateId!: string;
   phoneCode!: string;
   phoneNumber!: string;
@@ -51,7 +53,9 @@ export default class UserModel extends BaseModel {
         username: { type: 'string' },
         password: { type: 'string' },
         roleId: { type: 'number' },
-        fullname: { type: 'string' },
+        firstName: { type: 'string' },
+        lastName: { type: 'string' },
+        middleName: { type: 'string', nullable: true },
         phoneCode: { type: 'string' },
         privateId: { type: 'string' },
         phoneNumber: { type: 'string' },

@@ -31,7 +31,9 @@ export const EditUserProfileSchema: JSONSchemaType<EditUserProfileParams> = {
   properties: {
     phoneCode: { type: 'string', nullable: true },
     phoneNumber: { type: 'string', minLength: 8, maxLength: 10, nullable: true },
-    fullname: { type: 'string', minLength: 1, maxLength: 100, nullable: true },
+    firstName: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
+    lastName: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
+    middleName: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
     avatar: { type: 'string', minLength: 1, nullable: true },
     gender: { type: 'string', enum: ['M', 'F'], nullable: true },
     locale: { type: 'string', minLength: 2, maxLength: 10, nullable: true },
@@ -64,7 +66,15 @@ export const ChangePasswordSchema: JSONSchemaType<ChangePasswordParams> = {
 
 export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
   type: 'object',
-  required: ['password', 'username', 'phoneCode', 'phoneNumber', 'fullname', 'locale'],
+  required: [
+    'password', 
+    'username', 
+    'phoneCode', 
+    'phoneNumber',
+    'firstName',
+    'lastName', 
+    'locale',
+  ],
   properties: {
     username: { type: 'string', minLength: 10, maxLength: 32 },
     password: { type: 'string', minLength: 8, maxLength: 50 },
@@ -79,7 +89,9 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
       maxLength: 11,
     },
     locale: { type: 'string', enum: ['en', 'vi'] },
-    fullname: { type: 'string', minLength: 1, maxLength: 255 },
+    firstName: { type: 'string', minLength: 1, maxLength: 255 },
+    lastName: { type: 'string', minLength: 1, maxLength: 255 },
+    middleName: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
     phoneCode: { type: 'string', minLength: 1, maxLength: 5 },
   },
   additionalProperties: false
