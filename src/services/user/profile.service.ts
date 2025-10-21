@@ -56,13 +56,14 @@ export default new class UserProfile extends BaseService {
           'user.roleId',
           'user.locale',
           'user.status',
+          'user.gender',
         )
         .select(UserReplicaModel.raw(`
           "user".extra_info ->> 'secretKey' AS "secretKey"
         `))
         .first();
 
-      if (!(detail instanceof UserReplicaModel))
+      if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
       if (params.ignorePassword)
