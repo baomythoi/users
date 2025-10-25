@@ -29,6 +29,9 @@ export default new class UserProfile extends BaseService {
           if (params.userId)
             queryBuilder.where('user.id', params.userId);
 
+          if (params.uid)
+            queryBuilder.where('user.uid', params.uid);
+
           if (params.username)
             queryBuilder.where('user.username', params.username);
 
