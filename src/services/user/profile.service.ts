@@ -127,7 +127,7 @@ export default new class UserProfile extends BaseService {
           .insert({
             username: params.username,
             password: hashSync(params.password, 10),
-            roleId: 3,
+            roleId: params.roleId,
             firstName: params.firstName,
             lastName: params.lastName,
             middleName: params.middleName,

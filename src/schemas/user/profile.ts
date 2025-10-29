@@ -80,7 +80,7 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
     password: { type: 'string', minLength: 8, maxLength: 50 },
     roleId: {
       type: 'number',
-      enum: [3],
+      enum: [1, 3],
       nullable: true
     },
     phoneNumber: {
