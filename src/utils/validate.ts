@@ -1,4 +1,5 @@
 import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 import { FuncResponse } from '@interfaces/response';
 
 export default new class Validate {
@@ -6,6 +7,8 @@ export default new class Validate {
 
   constructor() {
     this.ajv = new Ajv();
+
+    addFormats(this.ajv);
   }
 
   async compile(params: object, schemas: object): Promise<FuncResponse<object>> {

@@ -151,3 +151,94 @@ export interface ChangeUserPasswordParams {
   username: string;
   newPassword: string;
 }
+
+export interface UsersListParams {
+  page: number;
+  pageSize: number;
+  status?: number;
+  roleId?: number;
+  search?: string;
+}
+
+export interface UserDetailParams {
+  userUid: string;
+}
+
+export interface PackageInfo {
+  packageCode: string;
+  totalTokens: number;
+  usedTokens: number;
+  availableTokens: number;
+  startDate: string | null;
+  endDate: string | null;
+  status: UserPackageStatus;
+}
+
+export interface Connections {
+  totalChannels: number;
+  facebookPages: ConnectedPage[];
+}
+
+export interface UserDetail {
+  uid: string;
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string | null;
+  avatar: string;
+  roleId: number;
+  roleName: string;
+  status: number;
+  locale: string;
+  gender?: number;
+  packageInfo: PackageInfo;
+  connections: Connections;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface UsersListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  results: UserListItem[];
+}
+
+export interface UserListItem {
+  uid: string;
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  email: string;
+  phoneCode: string | null;
+  phoneNumber: string | null;
+  avatar: string;
+  roleId: number;
+  status: number;
+  locale: string;
+  gender?: number;
+  packageName?: string;
+  packageCode?: string;
+  totalTokens?: number;
+  usedTokens?: number;
+  availableTokens?: number;
+  packageStartDate?: string | null;
+  packageEndDate?: string | null;
+  channelCount?: string;
+  facebookPages?: ConnectedPage[];
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export enum UserPackageStatus {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+}
+
+export interface ConnectedPage {
+  id: number;
+  name: string;
+}

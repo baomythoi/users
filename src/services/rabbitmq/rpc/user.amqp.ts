@@ -17,10 +17,15 @@ import {
   GetProvincesSchema,
   GetDistrictsSchema
 } from '@schemas/user/address.schema';
+import {
+  GetUsersListSchema,
+  UserDetailParamsSchema
+} from '@schemas/user/users.schema';
 
 // service
 import UserProfile from '@services/user/profile.service';
 import AddressService from '@services/user/address.service';
+import UserService from '@services/user/users.service';
 
 export default class UserPortalAmqp {
   protected channelWrapper: Channel;
@@ -210,6 +215,20 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await UserProfile.changeUserPassword(request.params);
+
+      case 'rpc.users.get_list.routing':
+        isValid = await this.common.validate.compile(request.params, GetUsersListSchema);
+        if (!isValid.success)
+          return isValid;
+
+        return await UserService.getList(request.params, request.authentication);
+
+      case 'rpc.users.get_detail.routing':
+        isValid = await this.common.validate.compile(request.params, UserDetailParamsSchema);
+        if (!isValid.success)
+          return isValid;
+
+        return await UserService.getDetail(request.params);
 
       default:
         return {
