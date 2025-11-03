@@ -189,6 +189,7 @@ export interface UserDetail {
   roleId: number;
   roleName: string;
   status: number;
+  statusName: string;
   locale: string;
   gender?: number;
   packageInfo: PackageInfo;
@@ -234,11 +235,17 @@ export interface UserListItem {
 }
 
 export enum UserPackageStatus {
-  ACTIVE = 'active',
-  EXPIRED = 'expired',
+  ACTIVE = 'Active',
+  EXPIRED = 'Expired',
 }
 
 export interface ConnectedPage {
   id: number;
   name: string;
+}
+
+export enum UserStatus {
+  InActive = 0,
+  Active = 1,
+  Suspended = 2,
 }

@@ -14,5 +14,5 @@ export interface PostMessagesParams {
   authentication?: {
     username: string
   };
-  params: any;
+  params?: any;
 }

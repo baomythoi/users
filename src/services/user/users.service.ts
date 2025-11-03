@@ -16,7 +16,8 @@ import {
   UserDetail,
   UserDetailParams,
   UserPackageStatus,
-  ConnectedPage
+  ConnectedPage,
+  UserStatus
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
@@ -31,11 +32,6 @@ export default new class UsersService extends BaseService {
 
       const queryBuilder = UserReplicaModel.query()
         .alias('u')
-        .leftJoin('chatbot_user_packages as up', function () {
-          this.on('u.uid', 'up.userUid')
-            .andOnVal('up.isActive', '=', true);
-        })
-        .leftJoin('chatbot_packages as pkg', 'up.packageUid', 'pkg.uid')
         .leftJoin('chatbot_channels as ch', function () {
           this.on('u.uid', 'ch.userUid')
             .andOnVal('ch.isActive', '=', true);
@@ -43,7 +39,6 @@ export default new class UsersService extends BaseService {
         .leftJoin('chatbot_facebook_pages as fp', 'ch.uid', 'fp.channelUid')
         .whereNot('u.username', auth.username);
 
-      // Filters
       if (status) queryBuilder.where('u.status', status);
       if (roleId) queryBuilder.where('u.roleId', roleId);
       if (search) {
@@ -55,7 +50,6 @@ export default new class UsersService extends BaseService {
         });
       }
 
-      // Execute query with aggregation
       const users = await queryBuilder
         .select(
           'u.uid',
@@ -73,12 +67,6 @@ export default new class UsersService extends BaseService {
           'u.locale',
           'u.createdAt',
           'u.updatedAt',
-          'pkg.name as packageName',
-          'pkg.code as packageCode',
-          'up.quota as totalTokens',
-          'up.usedQuota as usedTokens',
-          'up.startDate as packageStartDate',
-          'up.endDate as packageEndDate',
           UserReplicaModel.raw(`
             COALESCE(
               json_agg(
@@ -96,69 +84,86 @@ export default new class UsersService extends BaseService {
         .groupBy(
           'u.uid', 'u.id', 'u.username', 'u.firstName', 'u.lastName', 'u.middleName',
           'u.email', 'u.phoneCode', 'u.phoneNumber', 'u.avatar', 'u.roleId',
-          'u.status', 'u.locale', 'u.createdAt', 'u.updatedAt',
-          'pkg.name', 'pkg.code', 'up.quota', 'up.usedQuota',
-          'up.startDate', 'up.endDate'
+          'u.status', 'u.locale', 'u.createdAt', 'u.updatedAt'
         )
         .orderBy('u.createdAt', 'desc')
-        .page(page - 1, pageSize) as { 
-          total: number,
-          results: UserListItem[],
+        .page(page - 1, pageSize) as {
+          total: number;
+          results: UserListItem[];
         };
 
-      const now = this.common.moment.init();
+      const userDataList = await Promise.all(
+        users.results.map(async (user) => {
+          const [userPackageRes, tokenStatsRes] = await Promise.all([
+            this.postMessages({
+              exchange: 'rpc.service.chatbot.exchange',
+              routing: 'rpc.chatbot.user.account.get_user_package.routing',
+              message: { authentication: { username: user.username } },
+            }),
+            this.postMessages({
+              exchange: 'rpc.service.chatbot.exchange',
+              routing: 'rpc.chatbot.user.account.get_user_token_stats.routing',
+              message: { authentication: { username: user.username } },
+            }),
+          ]);
 
-      const results = users.results.map((user) => {
-        const availableTokens = user.totalTokens && user.usedTokens
-          ? user.totalTokens - user.usedTokens
-          : 0;
+          const packageData = userPackageRes?.data || {};
+          const tokenData = tokenStatsRes?.data || {};
 
-        const packageStatus =
-          user.packageEndDate && now.isBefore(this.common.moment.init(user.packageEndDate))
-            ? 'active'
-            : 'expired';
+          const totalTokens = tokenData?.totalTokens || packageData?.quota || 0;
+          const usedTokens = tokenData?.usedTokens || 0;
+          const availableTokens = tokenData?.availableTokens || 0;
 
-        const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
-          ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
-          : JSON.parse(user.facebookPages || '[]');
+          const startDate = packageData?.startDate || null;
+          const endDate = packageData?.endDate || null;
 
-        return {
-          uid: user.uid,
-          id: user.id,
-          fullName: `${user.firstName?.trim() || ''} ${user.middleName?.trim() || ''} ${user.lastName?.trim() || ''}`.trim(),
-          email: user.email,
-          phoneNumber:
-            user.phoneCode && user.phoneNumber
-              ? `${user.phoneCode.trim()}${user.phoneNumber.trim()}`
-              : '',
-          avatar: user.avatar,
-          roleId: user.roleId,
-          roleName: user.roleId === 1 ? 'Admin' : 'User',
-          status: user.status,
-          locale: user.locale,
-          packageInfo: {
-            packageCode: user.packageCode || '',
-            totalTokens: user.totalTokens || 0,
-            usedTokens: user.usedTokens || 0,
-            availableTokens,
-            status: packageStatus,
-            startDate: user.packageStartDate
-              ? this.common.moment.init(user.packageStartDate).format('DD/MM/YYYY HH:mm')
+          const now = this.common.moment.init();
+          const end = this.common.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+          const packageStatus = end.isValid() && now.isBefore(end)
+            ? UserPackageStatus.ACTIVE
+            : UserPackageStatus.EXPIRED;
+
+          const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
+            ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
+            : JSON.parse(user.facebookPages || '[]');
+
+          return {
+            uid: user.uid,
+            id: user.id,
+            fullName: `${user.firstName?.trim() || ''} ${user.middleName?.trim() || ''} ${user.lastName?.trim() || ''}`.trim(),
+            email: user.email,
+            phoneNumber:
+              user.phoneCode && user.phoneNumber
+                ? `+${user.phoneCode.trim()} ${user.phoneNumber.trim()}`
+                : null,
+            avatar: user.avatar,
+            roleId: user.roleId,
+            roleName: user.roleId === 1 ? 'Admin' : 'User',
+            status: user.status,
+            locale: user.locale,
+            packageInfo: {
+              packageCode: packageData?.packageCode || '',
+              totalTokens,
+              usedTokens,
+              availableTokens,
+              startDate: startDate || '',
+              endDate: endDate || '',
+              status: packageStatus,
+            },
+            connections: {
+              totalChannels: parseInt(user.channelCount || '0'),
+              facebookPages,
+            },
+            createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
+            updatedAt: user.updatedAt
+              ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
               : null,
-            endDate: user.packageEndDate
-              ? this.common.moment.init(user.packageEndDate).format('DD/MM/YYYY HH:mm')
-              : null,
-          },
-          connections: {
-            totalChannels: parseInt(user.channelCount || '0'),
-            facebookPages,
-          },
-          createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
-          updatedAt: user.updatedAt
-            ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
-            : null,
-        };
-      });
+          };
+        })
+      );
+
+      // Lọc bỏ các user lỗi RPC
+      const results = userDataList.filter(Boolean);
 
       return this.responseSuccess({
         total: users.total,
@@ -167,7 +172,6 @@ export default new class UsersService extends BaseService {
         totalPages: Math.ceil(users.total / pageSize),
         results,
       });
-
     } catch (error: any) {
       return this.responseError(error);
     }
@@ -177,11 +181,6 @@ export default new class UsersService extends BaseService {
     try {
       const user = await UserReplicaModel.query()
         .alias('u')
-        .leftJoin('chatbot_user_packages as up', function() {
-          this.on('u.uid', 'up.userUid')
-            .andOnVal('up.isActive', '=', true);
-        })
-        .leftJoin('chatbot_packages as pkg', 'up.packageUid', 'pkg.uid')
         .leftJoin('chatbot_channels as ch', function() {
           this.on('u.uid', 'ch.userUid')
             .andOnVal('ch.isActive', '=', true);
@@ -205,13 +204,6 @@ export default new class UsersService extends BaseService {
           'u.gender',
           'u.createdAt',
           'u.updatedAt',
-          // Package info
-          'pkg.name as packageName',
-          'pkg.code as packageCode',
-          'up.quota as totalTokens',
-          'up.usedQuota as usedTokens',
-          'up.startDate as packageStartDate',
-          'up.endDate as packageEndDate',
           UserReplicaModel.raw(`
             COALESCE(
               json_agg(
@@ -228,58 +220,74 @@ export default new class UsersService extends BaseService {
         .countDistinct('ch.uid as channelCount')
         .groupBy(
           'u.uid', 'u.id', 'u.username', 'u.firstName', 'u.lastName', 'u.middleName',
-          'u.email', 'u.phoneCode', 'u.phoneNumber', 'u.avatar', 'u.roleId', 
-          'u.status', 'u.locale', 'u.gender', 'u.createdAt', 'u.updatedAt',
-          'pkg.name', 'pkg.code', 'up.quota', 'up.usedQuota', 
-          'up.startDate', 'up.endDate'
+          'u.email', 'u.phoneCode', 'u.phoneNumber', 'u.avatar', 'u.roleId',
+          'u.status', 'u.locale', 'u.gender', 'u.createdAt', 'u.updatedAt'
         )
         .first() as UserListItem;
 
-      if (!user)
+      if (!user) 
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
-      const availableTokens = 
-        user.totalTokens && user.usedTokens 
-          ? user.totalTokens - user.usedTokens 
-          : 0;
+      const [userPackageRes, tokenStatsRes] = await Promise.all([
+        this.postMessages({
+          exchange: 'rpc.service.chatbot.exchange',
+          routing: 'rpc.chatbot.user.account.get_user_package.routing',
+          message: {
+            authentication: { username: user.username },
+          },
+        }),
+        this.postMessages({
+          exchange: 'rpc.service.chatbot.exchange',
+          routing: 'rpc.chatbot.user.account.get_user_token_stats.routing',
+          message: {
+            authentication: { username: user.username },
+          },
+        }),
+      ]);
+
+      const packageData = userPackageRes.data;
+      const tokenData = tokenStatsRes.data;
+
+      const totalTokens = tokenData?.totalTokens || packageData?.quota || 0;
+      const usedTokens = tokenData?.usedTokens || 0;
+      const availableTokens = tokenData?.availableTokens || 0;
+
+      const startDate = packageData?.startDate || null;
+      const endDate = packageData?.endDate || null;
 
       const now = this.common.moment.init();
-      const packageStatus =
-        user.packageEndDate && now.isBefore(this.common.moment.init(user.packageEndDate))
-          ? UserPackageStatus.ACTIVE
-          : UserPackageStatus.EXPIRED;
+      const end = this.common.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+      const packageStatus = end.isValid() && now.isBefore(end)
+        ? UserPackageStatus.ACTIVE
+        : UserPackageStatus.EXPIRED;
 
       const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
         ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
         : JSON.parse(user.facebookPages || '[]');
-        
-      const result: UserDetail = {
+
+      const detail: UserDetail = {
         uid: user.uid,
         id: user.id,
-        fullName: 
-          `${user.firstName?.trim() || ''} ${user.middleName?.trim() || ''} ${user.lastName?.trim() || ''}`.trim(),
+        fullName: `${user.firstName?.trim() || ''} ${user.middleName?.trim() || ''} ${user.lastName?.trim() || ''}`.trim(),
         email: user.email,
-        phoneNumber: 
-          user.phoneCode && user.phoneNumber 
-            ? `${user.phoneCode.trim()}${user.phoneNumber.trim()}` 
+        phoneNumber:
+          user.phoneCode && user.phoneNumber
+            ? `+${user.phoneCode.trim()} ${user.phoneNumber.trim()}`
             : null,
         avatar: user.avatar,
         roleId: user.roleId,
         roleName: user.roleId === 1 ? 'Admin' : 'User',
         status: user.status,
+        statusName: UserStatus[user.status],
         locale: user.locale,
         gender: user.gender,
-        packageInfo:{
-          packageCode: user.packageCode || '',
-          totalTokens: user.totalTokens || 0,
-          usedTokens: user.usedTokens || 0,
-          availableTokens: availableTokens,
-          startDate: user.packageStartDate 
-            ? this.common.moment.init(user.packageStartDate).format('DD/MM/YYYY HH:mm')
-            : null,
-          endDate: user.packageEndDate 
-            ? this.common.moment.init(user.packageEndDate).format('DD/MM/YYYY HH:mm')
-            : null,
+        packageInfo: {
+          packageCode: packageData?.packageCode || '',
+          totalTokens,
+          usedTokens,
+          availableTokens,
+          startDate: startDate || '',
+          endDate: endDate || '',
           status: packageStatus,
         },
         connections: {
@@ -287,11 +295,12 @@ export default new class UsersService extends BaseService {
           facebookPages,
         },
         createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
-        updatedAt: user.updatedAt ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss') : null,
+        updatedAt: user.updatedAt
+          ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
+          : null,
       };
 
-      return this.responseSuccess(result);
-
+      return this.responseSuccess(detail);
     } catch (error: any) {
       return this.responseError(error);
     }
