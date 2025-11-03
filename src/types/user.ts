@@ -158,6 +158,7 @@ export interface UsersListParams {
   status?: number;
   roleId?: number;
   search?: string;
+  packageCode?: string;
 }
 
 export interface UserDetailParams {

@@ -12,6 +12,7 @@ export const GetUsersListSchema: JSONSchemaType<UsersListParams> = {
     status: { type: 'number', enum: [0, 1, 2], nullable: true }, // 0: inactive, 1: active, 2: pending
     roleId: { type: 'number', minimum: 1, nullable: true },
     search: { type: 'string', minLength: 1, nullable: true },
+    packageCode: { type: 'string', minLength: 1, nullable: true }
   },
   required: ['page', 'pageSize'],
   additionalProperties: false

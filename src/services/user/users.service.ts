@@ -163,7 +163,13 @@ export default new class UsersService extends BaseService {
       );
 
       // Lọc bỏ các user lỗi RPC
-      const results = userDataList.filter(Boolean);
+      let results = userDataList.filter(Boolean);
+
+      if (params.packageCode) {
+        results = results.filter(
+          (user) => user.packageInfo.packageCode === params.packageCode
+        );
+      }
 
       return this.responseSuccess({
         total: users.total,
