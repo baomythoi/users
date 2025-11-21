@@ -19,6 +19,7 @@ import {
 } from '@schemas/user/address.schema';
 import {
   GetUsersListSchema,
+  SetUserStatusParamsSchema,
   UserDetailParamsSchema
 } from '@schemas/user/users.schema';
 
@@ -229,6 +230,13 @@ export default class UserPortalAmqp {
           return isValid;
 
         return await UserService.getDetail(request.params);
+
+      case 'rpc.users.set_status.routing':
+        isValid = await this.common.validate.compile(request.params, SetUserStatusParamsSchema);
+        if (!isValid.success)
+          return isValid;
+
+        return await UserProfile.setUserStatus(request.params);
 
       default:
         return {

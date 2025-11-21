@@ -250,3 +250,8 @@ export enum UserStatus {
   Active = 1,
   Suspended = 2,
 }
+
+export interface SetUserStatusParams {
+  userUid: string;
+  status: UserStatus;
+}

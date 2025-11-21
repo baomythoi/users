@@ -1,5 +1,6 @@
 import { JSONSchemaType } from 'ajv';
 import {
+  SetUserStatusParams,
   UserDetailParams,
   UsersListParams
 } from '@interfaces/user';
@@ -24,5 +25,15 @@ export const UserDetailParamsSchema: JSONSchemaType<UserDetailParams> = {
     userUid: { type: 'string', format: 'uuid' }
   },
   required: ['userUid'],
+  additionalProperties: false
+};
+
+export const SetUserStatusParamsSchema: JSONSchemaType<SetUserStatusParams> = {
+  type: 'object',
+  properties: {
+    userUid: { type: 'string', format: 'uuid', minLength: 1 },
+    status: { type: 'number', enum: [0, 1, 2] } // 0: inactive, 1: active, 2: suspended
+  },
+  required: ['userUid', 'status'],
   additionalProperties: false
 };

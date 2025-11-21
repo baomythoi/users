@@ -10,6 +10,7 @@ import {
   RegGSaleAccountParams,
   ActiveUserParams,
   ChangeUserPasswordParams,
+  SetUserStatusParams,
 } from '@interfaces/user';
 
 // model
@@ -197,6 +198,31 @@ export default new class UserProfile extends BaseService {
 
       // clear cache
       await this.common.redis.clearCache(`users:${params.username}:open-api:profile`);
+
+      return this.responseSuccess();
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async setUserStatus(params: SetUserStatusParams): Promise<FuncResponse<object>> {
+    try {
+      const detail = await UserModel.query()
+        .where('uid', params.userUid)
+        .first();
+
+      if (!detail)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
+
+      if (detail.status === params.status)
+        return this.responseSuccess({ message: 'Người dùng đã ở trạng thái này' });
+
+      await UserModel.query()
+        .patch({ status: params.status })
+        .where('uid', detail.uid);
+
+      // clear cache
+      await this.common.redis.clearCache(`users:${detail.username}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {
