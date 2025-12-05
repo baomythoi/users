@@ -178,6 +178,7 @@ export interface PackageInfo {
 export interface Connections {
   totalChannels: number;
   facebookPages: ConnectedPage[];
+  zaloOAs?: ConnectedPage[];
 }
 
 export interface UserDetail {
@@ -231,6 +232,7 @@ export interface UserListItem {
   packageEndDate?: string | null;
   channelCount?: string;
   facebookPages?: ConnectedPage[];
+  zaloOAs?: ConnectedPage[];
   createdAt: string;
   updatedAt: string | null;
 }

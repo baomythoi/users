@@ -37,6 +37,7 @@ export default new class UsersService extends BaseService {
             .andOnVal('ch.isActive', '=', true);
         })
         .leftJoin('chatbot_facebook_pages as fp', 'ch.uid', 'fp.channelUid')
+        .leftJoin('chatbot_zalo_oas as zo', 'ch.uid', 'zo.channelUid')
         .whereNot('u.username', auth.username);
 
       if (status) queryBuilder.where('u.status', status);
@@ -78,6 +79,18 @@ export default new class UsersService extends BaseService {
               ) FILTER (WHERE fp.page_id IS NOT NULL),
               '[]'::json
             ) as "facebookPages"
+          `),
+          UserReplicaModel.raw(`
+            COALESCE(
+              json_agg(
+                DISTINCT jsonb_build_object(
+                  'id', zo.oa_id,
+                  'name', zo.name,
+                  'isActive', zo.is_active
+                )
+              ) FILTER (WHERE zo.oa_id IS NOT NULL),
+              '[]'::json
+            ) as "zaloOAs"
           `)
         )
         .countDistinct('ch.uid as channelCount')
@@ -127,6 +140,10 @@ export default new class UsersService extends BaseService {
             ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
             : JSON.parse(user.facebookPages || '[]');
 
+          const zaloOAs: ConnectedPage[] = Array.isArray(user.zaloOAs)
+            ? user.zaloOAs.filter((p: ConnectedPage) => p?.id)
+            : JSON.parse(user.zaloOAs || '[]');
+
           return {
             uid: user.uid,
             id: user.id,
@@ -153,6 +170,7 @@ export default new class UsersService extends BaseService {
             connections: {
               totalChannels: parseInt(user.channelCount || '0'),
               facebookPages,
+              zaloOAs,
             },
             createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
             updatedAt: user.updatedAt
@@ -192,6 +210,7 @@ export default new class UsersService extends BaseService {
             .andOnVal('ch.isActive', '=', true);
         })
         .leftJoin('chatbot_facebook_pages as fp', 'ch.uid', 'fp.channelUid')
+        .leftJoin('chatbot_zalo_oas as zo', 'ch.uid', 'zo.channelUid')
         .where('u.uid', params.userUid)
         .select(
           'u.uid',
@@ -221,6 +240,18 @@ export default new class UsersService extends BaseService {
               ) FILTER (WHERE fp.page_id IS NOT NULL),
               '[]'::json
             ) as "facebookPages"
+          `),
+          UserReplicaModel.raw(`
+            COALESCE(
+              json_agg(
+                DISTINCT jsonb_build_object(
+                  'id', zo.oa_id,
+                  'name', zo.name,
+                  'isActive', zo.is_active
+                )
+              ) FILTER (WHERE zo.oa_id IS NOT NULL),
+              '[]'::json
+            ) as "zaloOAs"
           `)
         )
         .countDistinct('ch.uid as channelCount')
@@ -271,6 +302,10 @@ export default new class UsersService extends BaseService {
         ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
         : JSON.parse(user.facebookPages || '[]');
 
+      const zaloOAs: ConnectedPage[] = Array.isArray(user.zaloOAs)
+        ? user.zaloOAs.filter((p: ConnectedPage) => p?.id)
+        : JSON.parse(user.zaloOAs || '[]');
+
       const detail: UserDetail = {
         uid: user.uid,
         id: user.id,
@@ -299,6 +334,7 @@ export default new class UsersService extends BaseService {
         connections: {
           totalChannels: parseInt(user.channelCount || '0'),
           facebookPages,
+          zaloOAs,
         },
         createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
         updatedAt: user.updatedAt
