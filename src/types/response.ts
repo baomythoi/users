@@ -10,6 +10,7 @@ export interface FuncResponse<T> {
   statusCode: number;
   success: boolean;
   code?: string;
+  correlationId?: string;
   message?: string;
   data?: T;
   error?: Error;
