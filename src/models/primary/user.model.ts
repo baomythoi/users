@@ -17,7 +17,7 @@ export default class UserModel extends BaseModel {
   }
 
   $beforeUpdate(opt: ModelOptions, queryContext: QueryContext): Promise<any> | void {
-    this.updatedAt = Moment.init().format('YYYY-MM-DD HH:mm:ss');
+    this.updatedAt = Moment.init().utc().format('YYYY-MM-DD HH:mm:ss');
   }
 
   uid!: string;

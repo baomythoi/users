@@ -1,6 +1,13 @@
 import BaseService from '@core/base.service';
+import BaseCommon from '@core/base.common';
 import { CustomError } from '@errors/custom';
 import { hashSync } from 'bcrypt';
+
+// model
+import UserModel from '@models/primary/user.model';
+
+// repository
+import UserRepository from '@repositories/user.repository';
 
 // interface
 import { FuncResponse } from '@interfaces/response';
@@ -13,59 +20,14 @@ import {
   SetUserStatusParams,
 } from '@interfaces/user';
 
-// model
-import UserModel from '@models/primary/user.model';
-import UserReplicaModel from '@models/replica/user.model';
-
-export default new class UserProfile extends BaseService {
+class UserProfile extends BaseService {
   constructor() {
     super();
   }
 
   async get(params: ProfileParams): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserReplicaModel.query()
-        .alias('user')
-        .modify((queryBuilder) => {
-          if (params.userId)
-            queryBuilder.where('user.id', params.userId);
-
-          if (params.uid)
-            queryBuilder.where('user.uid', params.uid);
-
-          if (params.username)
-            queryBuilder.where('user.username', params.username);
-
-          if (params.privateId)
-            queryBuilder.where('user.privateId', params.privateId);
-
-          if (params.status)
-            queryBuilder.where('user.status', params.status);
-
-          if (params.secretKey)
-            queryBuilder.whereRaw(`?? ->> ? = ?`, ['user.extra_info', 'secretKey', params.secretKey]);
-        })
-        .select(
-          'user.id',
-          'user.uid',
-          'user.firstName',
-          'user.lastName',
-          'user.middleName',
-          'user.username',
-          'user.password',
-          'user.avatar',
-          'user.phoneCode',
-          'user.phoneNumber',
-          'user.email',
-          'user.roleId',
-          'user.locale',
-          'user.status',
-          'user.gender',
-        )
-        .select(UserReplicaModel.raw(`
-          "user".extra_info ->> 'secretKey' AS "secretKey"
-        `))
-        .first();
+      const detail = await UserRepository.getProfile(params);
 
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
@@ -73,7 +35,7 @@ export default new class UserProfile extends BaseService {
       if (params.ignorePassword)
         delete detail['password'];
 
-      await this.common.redis.addCache({
+      await BaseCommon.redis.addCache({
         key: `users:${params.username}:open-api:profile`,
         value: JSON.stringify(detail)
       }, 60 * 60 * 24 * 30); // Cache valid for 30 days
@@ -86,27 +48,25 @@ export default new class UserProfile extends BaseService {
 
   async edit(params: EditUserProfileParams, authentication: { username: string }): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserModel.query().findOne('username', authentication.username);
+      const detail = await UserRepository.findByUsername(authentication.username);
 
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
-      await UserModel.query()
-        .patch({
-          phoneCode: params.phoneCode,
-          phoneNumber: params.phoneNumber,
-          firstName: params.firstName,
-          lastName: params.lastName,
-          middleName: params.middleName,
-          avatar: params.avatar,
-          gender: params.gender === 'M' ? 1 : 2,
-          locale: params.locale,
-          password: params.password ? hashSync(params.password, 10) : undefined,
-        })
-        .where('uid', detail.uid);
+      await UserRepository.updateProfile(detail.uid, {
+        phoneCode: params.phoneCode,
+        phoneNumber: params.phoneNumber,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        middleName: params.middleName,
+        avatar: params.avatar,
+        gender: params.gender === 'M' ? 1 : 2,
+        locale: params.locale,
+        password: params.password ? hashSync(params.password, 10) : undefined,
+      });
 
       // clear cache
-      await this.common.redis.clearCache(`users:${authentication.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${authentication.username}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {
@@ -117,39 +77,31 @@ export default new class UserProfile extends BaseService {
   async register(params: RegGSaleAccountParams): Promise<FuncResponse<object>> {
     try {
       const result = await UserModel.transaction(async (trx) => {
-        const isExist = await UserModel.query(trx)
-          .where('username', params.username)
-          .first();
+        const isExist =
+          await UserRepository.existsByUsername(params.username, 1, trx);
 
         if (isExist)
           throw new CustomError(this.errorCodes.CONFLICT);
 
-        const insertResult = await UserModel.query(trx)
-          .insert({
-            username: params.username,
-            password: hashSync(params.password, 10),
-            roleId: params.roleId,
-            firstName: params.firstName,
-            lastName: params.lastName,
-            middleName: params.middleName,
-            phoneCode: params.phoneCode,
-            phoneNumber: params.phoneNumber,
-            email: params.username,
-            status: 2,
-            locale: params.locale || 'en',
-            createdAt: this.common.moment.init().format(),
-          })
-          .returning(['id', 'uid']);
+        const insertResult = await UserRepository.create({
+          username: params.username,
+          password: hashSync(params.password, 10),
+          roleId: params.roleId || 3,
+          phoneNumber: params.phoneNumber,
+          email: params.username,
+          status: 2,
+          locale: params.locale || 'en',
+          createdAt: BaseCommon.moment.init().format(),
+        }, trx);
 
-        await UserModel.query(trx)
-          .patch({
-            extraInfo: {
-              secretKey: `${insertResult.id}${this.common.nanoid.generateRandomId(
-                16 - insertResult.id.toString().length
-              )}`,
-            },
-          })
-          .where('id', insertResult.id);
+        // Update extraInfo using repository
+        await UserRepository.updateExtraInfo(
+          insertResult.id, {
+            secretKey: `${insertResult.id}${BaseCommon.nanoid.generateRandomId(
+              16 - insertResult.id.toString().length
+            )}`,
+          }, trx
+        );
 
         return insertResult.uid;
       });
@@ -162,20 +114,15 @@ export default new class UserProfile extends BaseService {
 
   async activeUser(params: ActiveUserParams): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserModel.query()
-        .where('username', params.username)
-        .where('status', 2)
-        .first();
+      const detail = await UserRepository.findByUsernameAndStatus(params.username, 2);
 
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
-      await UserModel.query()
-        .patch({ status: 1 })
-        .where('uid', detail.uid);
+      await UserRepository.updateByUid(detail.uid, { status: 1 });
 
       // clear cache
-      await this.common.redis.clearCache(`users:${params.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${params.username}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {
@@ -185,19 +132,16 @@ export default new class UserProfile extends BaseService {
 
   async changeUserPassword(params: ChangeUserPasswordParams): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserModel.query()
-        .where('username', params.username)
-        .first();
+      // Find user using repository
+      const detail = await UserRepository.findByUsername(params.username);
 
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
-      await UserModel.query()
-        .patch({ password: hashSync(params.newPassword, 10) })
-        .where('uid', detail.uid);
+      await UserRepository.updateByUid(detail.uid, { password: hashSync(params.newPassword, 10) });
 
       // clear cache
-      await this.common.redis.clearCache(`users:${params.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${params.username}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {
@@ -207,9 +151,7 @@ export default new class UserProfile extends BaseService {
 
   async setUserStatus(params: SetUserStatusParams): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserModel.query()
-        .where('uid', params.userUid)
-        .first();
+      const detail = await UserRepository.findByUid(params.userUid);
 
       if (!detail)
         throw new CustomError(this.errorCodes.NOT_FOUND);
@@ -217,12 +159,10 @@ export default new class UserProfile extends BaseService {
       if (detail.status === params.status)
         return this.responseSuccess({ message: 'Người dùng đã ở trạng thái này' });
 
-      await UserModel.query()
-        .patch({ status: params.status })
-        .where('uid', detail.uid);
-
+      await UserRepository.updateByUid(detail.uid, { status: params.status });
+  
       // clear cache
-      await this.common.redis.clearCache(`users:${detail.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${detail.username}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {
@@ -230,3 +170,5 @@ export default new class UserProfile extends BaseService {
     }
   }
 }
+
+export default new UserProfile();
