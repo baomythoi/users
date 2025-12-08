@@ -27,20 +27,24 @@ class UserProfile extends BaseService {
 
   async get(params: ProfileParams): Promise<FuncResponse<object>> {
     try {
-      const detail = await UserRepository.getProfile(params);
+      const cached = await BaseCommon.redis.getCache(`users:${params.username}:open-api:profile`);
+      if (cached) {
+        return this.responseSuccess(cached);
+      }
 
-      if (!detail)
+      const profile = await UserRepository.getProfile(params);
+      if (!profile)
         throw new CustomError(this.errorCodes.NOT_FOUND);
 
       if (params.ignorePassword)
-        delete detail['password'];
+        delete profile['password'];
 
       await BaseCommon.redis.addCache({
         key: `users:${params.username}:open-api:profile`,
-        value: JSON.stringify(detail)
+        value: JSON.stringify(profile)
       }, 60 * 60 * 24 * 30); // Cache valid for 30 days
 
-      return this.responseSuccess(detail);
+      return this.responseSuccess(profile);
     } catch (error: any) {
       return this.responseError(error);
     }

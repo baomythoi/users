@@ -251,7 +251,9 @@ class UserRepository extends BaseRepository {
       .select(
         'user.id',
         'user.uid',
-        'user.fullname',
+        'user.firstName',
+        'user.lastName',
+        'user.middleName',
         'user.username',
         'user.password',
         'user.avatar',
