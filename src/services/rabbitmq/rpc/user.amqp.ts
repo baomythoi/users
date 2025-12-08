@@ -1,5 +1,4 @@
 import BaseCommon from '@core/base.common';
-import { Channel } from 'amqplib';
 
 // interface
 import { FuncResponse } from '@interfaces/response';
@@ -14,10 +13,6 @@ import {
   ChangeUserPasswordSchema
 } from '@schemas/user/profile';
 import {
-  GetProvincesSchema,
-  GetDistrictsSchema
-} from '@schemas/user/address.schema';
-import {
   GetUsersListSchema,
   SetUserStatusParamsSchema,
   UserDetailParamsSchema
@@ -25,7 +20,6 @@ import {
 
 // service
 import UserProfile from '@services/user/profile.service';
-import AddressService from '@services/user/address.service';
 import UserService from '@services/user/users.service';
 
 class UsersRPCService {
@@ -44,16 +38,6 @@ class UsersRPCService {
         isValid = await BaseCommon.validate.compile(request.params, EditUserProfileSchema);
         if (!isValid.success) return isValid;
         return await UserProfile.edit(request.params, request.authentication);
-
-      case 'rpc.users.get_provinces.routing':
-        isValid = await BaseCommon.validate.compile(request.params, GetProvincesSchema);
-        if (!isValid.success) return isValid;
-        return await AddressService.getProvinces(request.params);
-
-      case 'rpc.users.get_districts.routing':
-        isValid = await BaseCommon.validate.compile(request.params, GetDistrictsSchema);
-        if (!isValid.success) return isValid;
-        return await AddressService.getDistricts(request.params);
 
       case 'rpc.users.register.routing':
         isValid = await BaseCommon.validate.compile(request.params, RegGSaleAccountSchema);

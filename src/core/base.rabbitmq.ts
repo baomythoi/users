@@ -7,18 +7,34 @@ import WorkerConsumer from '@core/consumers/worker.consumer';
 
 interface ConsumerConfig {
   name: string;
-  instance: any;
+  instance: RPCConsumer | WorkerConsumer;
   prefetchCount: number;
 }
 
+const CONSUMERS = {
+  RPC: {
+    name: 'users_rpc',
+    handler: RPCConsumer,
+    prefetch: 2,
+  },
+  WORKER: {
+    name: 'users_worker',
+    handler: WorkerConsumer,
+    prefetch: 3,
+  },
+};
+
 export default class RabbitMQService {
   private channels: Map<string, Channel> = new Map();
-  private consumers: ConsumerConfig[] = [
-    { name: 'users_rpc', instance: new RPCConsumer(), prefetchCount: 20 },
-    { name: 'users_worker', instance: new WorkerConsumer(), prefetchCount: 5 },
-  ];
 
- constructor() {
+  private consumers: ConsumerConfig[] =
+    Object.values(CONSUMERS).map(consumer => ({
+      name: consumer.name,
+      instance: new consumer.handler(),
+      prefetchCount: consumer.prefetch,
+    }));
+
+  constructor() {
     BaseCommon.rabbitmq.on('rabbitmq_connected', (): void => {
       this.init();
     });

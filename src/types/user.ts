@@ -257,3 +257,18 @@ export interface SetUserStatusParams {
   userUid: string;
   status: UserStatus;
 }
+
+export interface UserProfileResult {
+  id: number;
+  uid: string;
+  fullname: string;
+  username: string;
+  password?: string;
+  avatar: string;
+  phoneCode: string;
+  phoneNumber: string;
+  email: string;
+  roleId: number;
+  locale: string;
+  secretKey?: string;
+}
