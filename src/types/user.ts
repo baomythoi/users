@@ -178,6 +178,7 @@ export interface PackageInfo {
 export interface Connections {
   totalChannels: number;
   facebookPages: ConnectedPage[];
+  zaloOAs?: ConnectedPage[];
 }
 
 export interface UserDetail {
@@ -231,6 +232,7 @@ export interface UserListItem {
   packageEndDate?: string | null;
   channelCount?: string;
   facebookPages?: ConnectedPage[];
+  zaloOAs?: ConnectedPage[];
   createdAt: string;
   updatedAt: string | null;
 }
@@ -254,4 +256,19 @@ export enum UserStatus {
 export interface SetUserStatusParams {
   userUid: string;
   status: UserStatus;
+}
+
+export interface UserProfileResult {
+  id: number;
+  uid: string;
+  fullname: string;
+  username: string;
+  password?: string;
+  avatar: string;
+  phoneCode: string;
+  phoneNumber: string;
+  email: string;
+  roleId: number;
+  locale: string;
+  secretKey?: string;
 }

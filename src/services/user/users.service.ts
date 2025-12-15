@@ -1,18 +1,14 @@
 import BaseService from '@core/base.service';
+import BaseCommon from '@core/base.common';
 import { CustomError } from '@errors/custom';
 
-// service
-
-// model primary
-
-// model replica
-import UserReplicaModel from '@models/replica/user.model';
+// repository
+import UserRepository from '@repositories/user.repository';
 
 // interface
 import { FuncResponse } from '@interfaces/response';
 import { 
   UsersListParams,
-  UserListItem,
   UserDetail,
   UserDetailParams,
   UserPackageStatus,
@@ -21,76 +17,14 @@ import {
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
-export default new class UsersService extends BaseService {
+class UsersService extends BaseService {
   constructor() {
     super();
   }
 
   async getList(params: UsersListParams, auth: Authentication): Promise<FuncResponse<object>> {
     try {
-      const { page, pageSize, status, roleId, search } = params;
-
-      const queryBuilder = UserReplicaModel.query()
-        .alias('u')
-        .leftJoin('chatbot_channels as ch', function () {
-          this.on('u.uid', 'ch.userUid')
-            .andOnVal('ch.isActive', '=', true);
-        })
-        .leftJoin('chatbot_facebook_pages as fp', 'ch.uid', 'fp.channelUid')
-        .whereNot('u.username', auth.username);
-
-      if (status) queryBuilder.where('u.status', status);
-      if (roleId) queryBuilder.where('u.roleId', roleId);
-      if (search) {
-        queryBuilder.where(function () {
-          this.where('u.username', 'ilike', `%${search}%`)
-            .orWhere('u.firstName', 'ilike', `%${search}%`)
-            .orWhere('u.lastName', 'ilike', `%${search}%`)
-            .orWhere('u.email', 'ilike', `%${search}%`);
-        });
-      }
-
-      const users = await queryBuilder
-        .select(
-          'u.uid',
-          'u.id',
-          'u.username',
-          'u.firstName',
-          'u.lastName',
-          'u.middleName',
-          'u.email',
-          'u.phoneCode',
-          'u.phoneNumber',
-          'u.avatar',
-          'u.roleId',
-          'u.status',
-          'u.locale',
-          'u.createdAt',
-          'u.updatedAt',
-          UserReplicaModel.raw(`
-            COALESCE(
-              json_agg(
-                DISTINCT jsonb_build_object(
-                  'id', fp.page_id,
-                  'name', fp.page_name,
-                  'isActive', fp.is_active
-                )
-              ) FILTER (WHERE fp.page_id IS NOT NULL),
-              '[]'::json
-            ) as "facebookPages"
-          `)
-        )
-        .countDistinct('ch.uid as channelCount')
-        .groupBy(
-          'u.uid', 'u.id', 'u.username', 'u.firstName', 'u.lastName', 'u.middleName',
-          'u.email', 'u.phoneCode', 'u.phoneNumber', 'u.avatar', 'u.roleId',
-          'u.status', 'u.locale', 'u.createdAt', 'u.updatedAt'
-        )
-        .orderBy('u.createdAt', 'desc')
-        .page(page - 1, pageSize) as {
-          total: number;
-          results: UserListItem[];
-        };
+      const users = await UserRepository.getUserList(params, auth);
 
       const userDataList = await Promise.all(
         users.results.map(async (user) => {
@@ -117,8 +51,8 @@ export default new class UsersService extends BaseService {
           const startDate = packageData?.startDate || null;
           const endDate = packageData?.endDate || null;
 
-          const now = this.common.moment.init();
-          const end = this.common.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+          const now = BaseCommon.moment.init();
+          const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
           const packageStatus = end.isValid() && now.isBefore(end)
             ? UserPackageStatus.ACTIVE
             : UserPackageStatus.EXPIRED;
@@ -126,6 +60,10 @@ export default new class UsersService extends BaseService {
           const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
             ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
             : JSON.parse(user.facebookPages || '[]');
+
+          const zaloOAs: ConnectedPage[] = Array.isArray(user.zaloOAs)
+            ? user.zaloOAs.filter((p: ConnectedPage) => p?.id)
+            : JSON.parse(user.zaloOAs || '[]');
 
           return {
             uid: user.uid,
@@ -153,16 +91,16 @@ export default new class UsersService extends BaseService {
             connections: {
               totalChannels: parseInt(user.channelCount || '0'),
               facebookPages,
+              zaloOAs,
             },
-            createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
+            createdAt: BaseCommon.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
             updatedAt: user.updatedAt
-              ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
+              ? BaseCommon.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
               : null,
           };
         })
       );
 
-      // Lọc bỏ các user lỗi RPC
       let results = userDataList.filter(Boolean);
 
       if (params.packageCode) {
@@ -173,9 +111,6 @@ export default new class UsersService extends BaseService {
 
       return this.responseSuccess({
         total: users.total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(users.total / pageSize),
         results,
       });
     } catch (error: any) {
@@ -185,51 +120,7 @@ export default new class UsersService extends BaseService {
 
   async getDetail(params: UserDetailParams): Promise<FuncResponse<object>> {
     try {
-      const user = await UserReplicaModel.query()
-        .alias('u')
-        .leftJoin('chatbot_channels as ch', function() {
-          this.on('u.uid', 'ch.userUid')
-            .andOnVal('ch.isActive', '=', true);
-        })
-        .leftJoin('chatbot_facebook_pages as fp', 'ch.uid', 'fp.channelUid')
-        .where('u.uid', params.userUid)
-        .select(
-          'u.uid',
-          'u.id',
-          'u.username',
-          'u.firstName',
-          'u.lastName',
-          'u.middleName',
-          'u.email',
-          'u.phoneCode',
-          'u.phoneNumber',
-          'u.avatar',
-          'u.roleId',
-          'u.status',
-          'u.locale',
-          'u.gender',
-          'u.createdAt',
-          'u.updatedAt',
-          UserReplicaModel.raw(`
-            COALESCE(
-              json_agg(
-                DISTINCT jsonb_build_object(
-                  'id', fp.page_id,
-                  'name', fp.page_name,
-                  'isActive', fp.is_active
-                )
-              ) FILTER (WHERE fp.page_id IS NOT NULL),
-              '[]'::json
-            ) as "facebookPages"
-          `)
-        )
-        .countDistinct('ch.uid as channelCount')
-        .groupBy(
-          'u.uid', 'u.id', 'u.username', 'u.firstName', 'u.lastName', 'u.middleName',
-          'u.email', 'u.phoneCode', 'u.phoneNumber', 'u.avatar', 'u.roleId',
-          'u.status', 'u.locale', 'u.gender', 'u.createdAt', 'u.updatedAt'
-        )
-        .first() as UserListItem;
+      const user = await UserRepository.getUserDetail(params.userUid);
 
       if (!user) 
         throw new CustomError(this.errorCodes.NOT_FOUND);
@@ -261,8 +152,8 @@ export default new class UsersService extends BaseService {
       const startDate = packageData?.startDate || null;
       const endDate = packageData?.endDate || null;
 
-      const now = this.common.moment.init();
-      const end = this.common.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+      const now = BaseCommon.moment.init();
+      const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
       const packageStatus = end.isValid() && now.isBefore(end)
         ? UserPackageStatus.ACTIVE
         : UserPackageStatus.EXPIRED;
@@ -270,6 +161,10 @@ export default new class UsersService extends BaseService {
       const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
         ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
         : JSON.parse(user.facebookPages || '[]');
+
+      const zaloOAs: ConnectedPage[] = Array.isArray(user.zaloOAs)
+        ? user.zaloOAs.filter((p: ConnectedPage) => p?.id)
+        : JSON.parse(user.zaloOAs || '[]');
 
       const detail: UserDetail = {
         uid: user.uid,
@@ -299,10 +194,11 @@ export default new class UsersService extends BaseService {
         connections: {
           totalChannels: parseInt(user.channelCount || '0'),
           facebookPages,
+          zaloOAs,
         },
-        createdAt: this.common.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
+        createdAt: BaseCommon.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
         updatedAt: user.updatedAt
-          ? this.common.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
+          ? BaseCommon.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
           : null,
       };
 
@@ -312,3 +208,5 @@ export default new class UsersService extends BaseService {
     }
   }
 }
+
+export default new UsersService();
