@@ -50,6 +50,30 @@ class UserProfile extends BaseService {
     }
   }
 
+  async getById(params: ProfileParams): Promise<FuncResponse<object>> {
+    try {
+      const cached = await this.common.redis.getCache(`users:${params.userId}:open-api:profile`);
+      if (cached)
+        return this.responseSuccess(cached);
+  
+      const profile = await UserRepository.getProfile({ userId: params.userId });
+      if (!profile)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
+  
+      if (params.ignorePassword)
+        delete profile.password;
+  
+      await this.common.redis.addCache({
+        key: `users:${params.userId}:open-api:profile`,
+        value: JSON.stringify(profile),
+      }, 60 * 30); // 30 minutes
+  
+      return this.responseSuccess(profile);
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
   async edit(params: EditUserProfileParams, authentication: { username: string }): Promise<FuncResponse<object>> {
     try {
       const detail = await UserRepository.findByUsername(authentication.username);
@@ -69,8 +93,13 @@ class UserProfile extends BaseService {
         password: params.password ? hashSync(params.password, 10) : undefined,
       });
 
+      const userDetail = await UserRepository.findByUsername(authentication.username);
+      if (!userDetail)
+        throw new CustomError(this.errorCodes.NOT_FOUND);
+
       // clear cache
-      await BaseCommon.redis.clearCache(`users:${authentication.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${userDetail.username}:open-api:profile`);
+      await BaseCommon.redis.clearCache(`users:${userDetail.id}:open-api:profile`);
 
       return this.responseSuccess();
     } catch (error: any) {

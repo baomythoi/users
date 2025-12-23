@@ -34,6 +34,11 @@ class UsersRPCService {
         if (!isValid.success) return isValid;
         return await UserProfile.get(request.params);
 
+      case 'rpc.users.profile_by_id.routing':
+        isValid = await BaseCommon.validate.compile(request.params, ProfileSchema);
+        if (!isValid.success) return isValid;
+        return await UserProfile.getById(request.params);
+
       case 'rpc.users.edit_profile.routing':
         isValid = await BaseCommon.validate.compile(request.params, EditUserProfileSchema);
         if (!isValid.success) return isValid;
