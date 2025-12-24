@@ -13,6 +13,7 @@ import {
   ChangeUserPasswordSchema
 } from '@schemas/user/profile';
 import {
+  GetTotalUsersParamsSchema,
   GetUsersListSchema,
   SetUserStatusParamsSchema,
   UserDetailParamsSchema
@@ -73,6 +74,11 @@ class UsersRPCService {
         isValid = await BaseCommon.validate.compile(request.params, SetUserStatusParamsSchema);
         if (!isValid.success) return isValid;
         return await UserProfile.setUserStatus(request.params);
+
+      case 'rpc.users.get_total.routing':
+        isValid = await BaseCommon.validate.compile(request.params, GetTotalUsersParamsSchema);
+        if (!isValid.success) return isValid;
+        return await UserService.getTotalUsers(request.params);
 
       default:
         return {

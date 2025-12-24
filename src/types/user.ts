@@ -272,3 +272,9 @@ export interface UserProfileResult {
   locale: string;
   secretKey?: string;
 }
+
+export interface GetTotalUsersParams {
+  status?: number;
+  startDate?: string;
+  endDate?: string;
+}

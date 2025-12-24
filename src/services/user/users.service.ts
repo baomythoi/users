@@ -13,7 +13,8 @@ import {
   UserDetailParams,
   UserPackageStatus,
   ConnectedPage,
-  UserStatus
+  UserStatus,
+  GetTotalUsersParams
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
@@ -203,6 +204,15 @@ class UsersService extends BaseService {
       };
 
       return this.responseSuccess(detail);
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async getTotalUsers(params: GetTotalUsersParams): Promise<FuncResponse<object>> {
+    try {
+      const total = await UserRepository.getTotalUsers(params.status, params.startDate, params.endDate);
+      return this.responseSuccess({ total });
     } catch (error: any) {
       return this.responseError(error);
     }

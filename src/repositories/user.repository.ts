@@ -287,6 +287,20 @@ class UserRepository extends BaseRepository {
       .patch(data)
       .where('uid', uid);
   }
+
+  async getTotalUsers(
+    status?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<number> {
+    const queryBuilder = UserReplicaModel.query();
+
+    if (status) queryBuilder.where('status', status);
+    if (startDate) queryBuilder.where('createdAt', '>=', startDate);
+    if (endDate) queryBuilder.where('createdAt', '<=', endDate);
+
+    return await queryBuilder.resultSize();
+  }
 }
 
 export default new UserRepository();
