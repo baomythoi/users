@@ -299,6 +299,8 @@ class UserRepository extends BaseRepository {
     if (startDate) queryBuilder.where('createdAt', '>=', startDate);
     if (endDate) queryBuilder.where('createdAt', '<=', endDate);
 
+    queryBuilder.where('roleId', 3); // get users only
+
     return await queryBuilder.resultSize();
   }
 
@@ -320,6 +322,8 @@ class UserRepository extends BaseRepository {
     if (endDate) {
       queryBuilder.where('createdAt', '<=', endDate);
     }
+
+    queryBuilder.where('roleId', 3); // get users only
 
     return await queryBuilder;
   }

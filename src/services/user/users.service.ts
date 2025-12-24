@@ -226,36 +226,57 @@ class UsersService extends BaseService {
 
   async getTotalExpiredUsers(params: GetTotalUsersParams): Promise<FuncResponse<object>> {
     try {
-      const users = await UserRepository.getAllUsers(1, params.startDate, params.endDate);
-
-      const expiredCount = await users.reduce(async (accPromise, user) => {
-        const acc = await accPromise;
-        
-        const userPackageRes = await this.postMessages({
-          exchange: 'rpc.service.chatbot.exchange',
-          routing: 'rpc.chatbot.user.account.get_user_package.routing',
-          message: { authentication: { username: user.username } },
-        });
-
-        const packageData = userPackageRes?.data || {};
-        const endDate = packageData?.endDate;
-
-        if (endDate) {
-          const now = BaseCommon.moment.init();
-          const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
-
-          if (end.isValid() && !now.isBefore(end)) {
-            return acc + 1;
-          }
-        }
-
-        return acc;
-      }, Promise.resolve(0));
-
-      return this.responseSuccess({ total: expiredCount });
+      const total = await this.countUsersByPackageStatus(params, true);
+      return this.responseSuccess({ total });
     } catch (error: any) {
       return this.responseError(error);
     }
+  }
+
+  async getTotalActiveUsers(params: GetTotalUsersParams): Promise<FuncResponse<object>> {
+    try {
+      const total = await this.countUsersByPackageStatus(params, false);
+      return this.responseSuccess({ total });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  private async countUsersByPackageStatus(
+    params: GetTotalUsersParams,
+    checkExpired: boolean
+  ): Promise<number> {
+    const users = await UserRepository.getAllUsers(1, params.startDate, params.endDate);
+
+    const count = await users.reduce(async (accPromise, user) => {
+      const acc = await accPromise;
+      
+      const userPackageRes = await this.postMessages({
+        exchange: 'rpc.service.chatbot.exchange',
+        routing: 'rpc.chatbot.user.account.get_user_package.routing',
+        message: { authentication: { username: user.username } },
+      });
+
+      const packageData = userPackageRes?.data || {};
+      const endDate = packageData?.endDate;
+
+      if (endDate) {
+        const now = BaseCommon.moment.init();
+        const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+
+        if (end.isValid()) {
+          const isExpired = !now.isBefore(end);
+          // Nếu checkExpired = true thì đếm expired, ngược lại đếm active
+          if (checkExpired === isExpired) {
+            return acc + 1;
+          }
+        }
+      }
+
+      return acc;
+    }, Promise.resolve(0));
+
+    return count;
   }
 }
 
