@@ -80,6 +80,11 @@ class UsersRPCService {
         if (!isValid.success) return isValid;
         return await UserService.getTotalUsers(request.params);
 
+      case 'rpc.users.get_total_expired.routing':
+        isValid = await BaseCommon.validate.compile(request.params, GetTotalUsersParamsSchema);
+        if (!isValid.success) return isValid;
+        return await UserService.getTotalExpiredUsers(request.params);
+
       default:
         return {
           statusCode: 404,

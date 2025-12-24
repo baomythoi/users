@@ -301,6 +301,28 @@ class UserRepository extends BaseRepository {
 
     return await queryBuilder.resultSize();
   }
+
+  async getAllUsers(
+    status?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<Array<UserModel>> {
+    const queryBuilder = UserReplicaModel.query();
+
+    if (status) {
+      queryBuilder.where('status', status);
+    }
+
+    if (startDate) {
+      queryBuilder.where('createdAt', '>=', startDate);
+    }
+
+    if (endDate) {
+      queryBuilder.where('createdAt', '<=', endDate);
+    }
+
+    return await queryBuilder;
+  }
 }
 
 export default new UserRepository();

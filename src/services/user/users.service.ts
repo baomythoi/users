@@ -52,11 +52,14 @@ class UsersService extends BaseService {
           const startDate = packageData?.startDate || null;
           const endDate = packageData?.endDate || null;
 
-          const now = BaseCommon.moment.init();
-          const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
-          const packageStatus = end.isValid() && now.isBefore(end)
-            ? UserPackageStatus.ACTIVE
-            : UserPackageStatus.EXPIRED;
+          let packageStatus = UserPackageStatus.NONE;
+          if (endDate) {
+            const now = BaseCommon.moment.init();
+            const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+            packageStatus = end.isValid() && now.isBefore(end)
+              ? UserPackageStatus.ACTIVE
+              : UserPackageStatus.EXPIRED;
+          }
 
           const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
             ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
@@ -153,11 +156,14 @@ class UsersService extends BaseService {
       const startDate = packageData?.startDate || null;
       const endDate = packageData?.endDate || null;
 
-      const now = BaseCommon.moment.init();
-      const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
-      const packageStatus = end.isValid() && now.isBefore(end)
-        ? UserPackageStatus.ACTIVE
-        : UserPackageStatus.EXPIRED;
+      let packageStatus = UserPackageStatus.NONE;
+      if (endDate) {
+        const now = BaseCommon.moment.init();
+        const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+        packageStatus = end.isValid() && now.isBefore(end)
+          ? UserPackageStatus.ACTIVE
+          : UserPackageStatus.EXPIRED;
+      }
 
       const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
         ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
@@ -213,6 +219,40 @@ class UsersService extends BaseService {
     try {
       const total = await UserRepository.getTotalUsers(params.status, params.startDate, params.endDate);
       return this.responseSuccess({ total });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async getTotalExpiredUsers(params: GetTotalUsersParams): Promise<FuncResponse<object>> {
+    try {
+      const users = await UserRepository.getAllUsers(1, params.startDate, params.endDate);
+
+      const expiredCount = await users.reduce(async (accPromise, user) => {
+        const acc = await accPromise;
+        
+        const userPackageRes = await this.postMessages({
+          exchange: 'rpc.service.chatbot.exchange',
+          routing: 'rpc.chatbot.user.account.get_user_package.routing',
+          message: { authentication: { username: user.username } },
+        });
+
+        const packageData = userPackageRes?.data || {};
+        const endDate = packageData?.endDate;
+
+        if (endDate) {
+          const now = BaseCommon.moment.init();
+          const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+
+          if (end.isValid() && !now.isBefore(end)) {
+            return acc + 1;
+          }
+        }
+
+        return acc;
+      }, Promise.resolve(0));
+
+      return this.responseSuccess({ total: expiredCount });
     } catch (error: any) {
       return this.responseError(error);
     }

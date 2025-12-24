@@ -240,6 +240,7 @@ export interface UserListItem {
 export enum UserPackageStatus {
   ACTIVE = 'Active',
   EXPIRED = 'Expired',
+  NONE = 'None',
 }
 
 export interface ConnectedPage {
