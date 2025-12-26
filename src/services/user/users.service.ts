@@ -15,7 +15,8 @@ import {
   ConnectedPage,
   UserStatus,
   GetTotalUsersParams,
-  GetUsersCountByPackageParams
+  GetUsersCountByPackageParams,
+  GetUsersGrowthByMonthParams
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
@@ -393,6 +394,23 @@ class UsersService extends BaseService {
         packageCode,
         count,
       }));
+
+      return this.responseSuccess({ data });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async getUsersGrowthByMonth(params: GetUsersGrowthByMonthParams): Promise<FuncResponse<object>> {
+    try {
+      const startDate = params.startDate
+        ? BaseCommon.moment.init(params.startDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
+        : BaseCommon.moment.init().subtract(6, 'months').startOf('month').format('YYYY-MM-DD');
+      const endDate = params.endDate
+        ? BaseCommon.moment.init(params.endDate, 'YYYY-MM-DD').format('YYYY-MM-DD')
+        : BaseCommon.moment.init().endOf('month').format('YYYY-MM-DD');
+
+      const data = await UserRepository.getUsersGrowthByMonth(startDate, endDate);
 
       return this.responseSuccess({ data });
     } catch (error: any) {

@@ -15,6 +15,7 @@ import {
 import {
   GetTotalUsersParamsSchema,
   GetUsersCountByPackageParamsSchema,
+  GetUsersGrowthByMonthParamsSchema,
   GetUsersListSchema,
   SetUserStatusParamsSchema,
   UserDetailParamsSchema
@@ -101,6 +102,11 @@ class UsersRPCService {
         isValid = await BaseCommon.validate.compile(request.params, GetUsersCountByPackageParamsSchema);
         if (!isValid.success) return isValid;
         return await UserService.getUsersCountByPackage(request.params);
+
+      case 'rpc.users.get_growth_by_month.routing':
+        isValid = await BaseCommon.validate.compile(request.params, GetUsersGrowthByMonthParamsSchema);
+        if (!isValid.success) return isValid;
+        return await UserService.getUsersGrowthByMonth(request.params);
 
       default:
         return {
