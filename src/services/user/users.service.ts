@@ -278,6 +278,87 @@ class UsersService extends BaseService {
 
     return count;
   }
+
+  async getLatestUsers(): Promise<FuncResponse<object>> {
+    try {
+      const users = await UserRepository.getLatestUsers(10);
+
+      const results = users.map(user => ({
+        uid: user.uid,
+        id: user.id,
+        fullName: `${user.firstName?.trim() || ''} ${user.middleName?.trim() || ''} ${user.lastName?.trim() || ''}`.trim(),
+        email: user.email,
+        phoneNumber:
+          user.phoneCode && user.phoneNumber
+            ? `+${user.phoneCode.trim()} ${user.phoneNumber.trim()}`
+            : null,
+        avatar: user.avatar,
+        roleId: user.roleId,
+        status: user.status,
+        locale: user.locale,
+        createdAt: BaseCommon.moment.init(user.createdAt).format('DD/MM/YYYY HH:mm:ss'),
+        updatedAt: user.updatedAt
+          ? BaseCommon.moment.init(user.updatedAt).format('DD/MM/YYYY HH:mm:ss')
+          : null,
+      }));
+
+      return this.responseSuccess({ results });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async getTopUsersExpiringSoon(): Promise<FuncResponse<object>> {
+    try {
+      const users = await UserRepository.getAllUsers(1);
+
+      const usersWithPackage = await Promise.all(
+        users.map(async (user) => {
+          const userPackageRes = await this.postMessages({
+            exchange: 'rpc.service.chatbot.exchange',
+            routing: 'rpc.chatbot.user.account.get_user_package.routing',
+            message: { authentication: { username: user.username } },
+          });
+
+          const packageData = userPackageRes?.data || {};
+          const endDate = packageData?.endDate;
+
+          if (endDate) {
+            const now = BaseCommon.moment.init();
+            const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+
+            // Chỉ lấy users còn hạn
+            if (end.isValid() && now.isBefore(end)) {
+              return {
+                uid: user.uid,
+                username: user.username,
+                endDate: endDate,
+                endDateTimestamp: end.valueOf(),
+                daysLeft: end.diff(now, 'days'),
+              };
+            }
+          }
+
+          return null;
+        })
+      );
+
+      const results = usersWithPackage
+        .filter(user => user !== null)
+        .sort((a, b) => (a?.endDateTimestamp || 0) - (b?.endDateTimestamp || 0))
+        .slice(0, 10)
+        .map(user => ({
+          uid: user?.uid || '',
+          username: user?.username || '',
+          endDate: user?.endDate || '',
+          daysLeft: user?.daysLeft || 0,
+        }));
+
+      return this.responseSuccess({ results });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
 }
 
 export default new UsersService();

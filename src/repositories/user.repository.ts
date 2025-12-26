@@ -327,6 +327,13 @@ class UserRepository extends BaseRepository {
 
     return await queryBuilder;
   }
+
+  async getLatestUsers(limit: number): Promise<UserModel[]> {
+    return await UserReplicaModel.query()
+      .where('roleId', 3) // users only
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+  }
 }
 
 export default new UserRepository();
