@@ -279,3 +279,8 @@ export interface GetTotalUsersParams {
   startDate?: string;
   endDate?: string;
 }
+
+export interface GetUsersCountByPackageParams {
+  startDate?: string;
+  endDate?: string;
+}

@@ -14,6 +14,7 @@ import {
 } from '@schemas/user/profile';
 import {
   GetTotalUsersParamsSchema,
+  GetUsersCountByPackageParamsSchema,
   GetUsersListSchema,
   SetUserStatusParamsSchema,
   UserDetailParamsSchema
@@ -95,6 +96,11 @@ class UsersRPCService {
 
       case 'rpc.users.get_latest.routing':
         return await UserService.getLatestUsers();
+
+      case 'rpc.users.get_count_by_package.routing':
+        isValid = await BaseCommon.validate.compile(request.params, GetUsersCountByPackageParamsSchema);
+        if (!isValid.success) return isValid;
+        return await UserService.getUsersCountByPackage(request.params);
 
       default:
         return {

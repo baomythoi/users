@@ -14,7 +14,8 @@ import {
   UserPackageStatus,
   ConnectedPage,
   UserStatus,
-  GetTotalUsersParams
+  GetTotalUsersParams,
+  GetUsersCountByPackageParams
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
@@ -355,6 +356,45 @@ class UsersService extends BaseService {
         }));
 
       return this.responseSuccess({ results });
+    } catch (error: any) {
+      return this.responseError(error);
+    }
+  }
+
+  async getUsersCountByPackage(params: GetUsersCountByPackageParams): Promise<FuncResponse<object>> {
+    try {
+      const users = await UserRepository.getAllUsers(1, params.startDate, params.endDate);
+
+      const packagesData = await Promise.all(
+        users.map(async (user) => {
+          try {
+            const userPackageRes = await this.postMessages({
+              exchange: 'rpc.service.chatbot.exchange',
+              routing: 'rpc.chatbot.user.account.get_user_package.routing',
+              message: { authentication: { username: user.username } },
+            });
+
+            const packageData = userPackageRes?.data || {};
+            return packageData?.packageCode || 'NO_PACKAGE';
+          } catch (error) {
+            return 'NO_PACKAGE';
+          }
+        })
+      );
+
+      // Group by packageCode and count
+      const packageCounts = packagesData.reduce((acc, packageCode) => {
+        acc[packageCode] = (acc[packageCode] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Format for chart
+      const data = Object.entries(packageCounts).map(([packageCode, count]) => ({
+        packageCode,
+        count,
+      }));
+
+      return this.responseSuccess({ data });
     } catch (error: any) {
       return this.responseError(error);
     }
