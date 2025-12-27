@@ -3,6 +3,7 @@ import BaseCommon from '@core/base.common';
 
 /** Users RPC */
 import UserRPC from '@services/rabbitmq/rpc/user.amqp';
+import StatisticRPC from '@services/rabbitmq/rpc/statistics.amqp';
 
 //interface
 import { RequestParams } from '@interfaces/rabbitmq';
@@ -12,6 +13,7 @@ const RPC_EXCHANGE = 'rpc.service.users.exchange';
 const RPC_QUEUE = 'rpc.service.users.queue';
 const RPC_HANDLERS = [
   UserRPC,
+  StatisticRPC,
 ];
  
 export default class RPCConsumer {

@@ -13,7 +13,7 @@ import {
   UserDetailParams,
   UserPackageStatus,
   ConnectedPage,
-  UserStatus
+  UserStatus,
 } from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
@@ -51,11 +51,14 @@ class UsersService extends BaseService {
           const startDate = packageData?.startDate || null;
           const endDate = packageData?.endDate || null;
 
-          const now = BaseCommon.moment.init();
-          const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
-          const packageStatus = end.isValid() && now.isBefore(end)
-            ? UserPackageStatus.ACTIVE
-            : UserPackageStatus.EXPIRED;
+          let packageStatus = UserPackageStatus.NONE;
+          if (endDate) {
+            const now = BaseCommon.moment.init();
+            const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+            packageStatus = end.isValid() && now.isBefore(end)
+              ? UserPackageStatus.ACTIVE
+              : UserPackageStatus.EXPIRED;
+          }
 
           const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
             ? user.facebookPages.filter((p: ConnectedPage) => p?.id)
@@ -152,11 +155,14 @@ class UsersService extends BaseService {
       const startDate = packageData?.startDate || null;
       const endDate = packageData?.endDate || null;
 
-      const now = BaseCommon.moment.init();
-      const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
-      const packageStatus = end.isValid() && now.isBefore(end)
-        ? UserPackageStatus.ACTIVE
-        : UserPackageStatus.EXPIRED;
+      let packageStatus = UserPackageStatus.NONE;
+      if (endDate) {
+        const now = BaseCommon.moment.init();
+        const end = BaseCommon.moment.init(endDate, 'HH:mm DD/MM/YYYY');
+        packageStatus = end.isValid() && now.isBefore(end)
+          ? UserPackageStatus.ACTIVE
+          : UserPackageStatus.EXPIRED;
+      }
 
       const facebookPages: ConnectedPage[] = Array.isArray(user.facebookPages)
         ? user.facebookPages.filter((p: ConnectedPage) => p?.id)

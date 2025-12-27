@@ -8,7 +8,12 @@ import UserModel from '@models/primary/user.model';
 import UserReplicaModel from '@models/replica/user.model';
 
 // interfaces
-import { ProfileParams, UserListItem, UsersListParams } from '@interfaces/user';
+import {
+  ProfileParams,
+  UserListItem,
+  UsersListParams,
+  UserStatus
+} from '@interfaces/user';
 import { Authentication } from '@interfaces/auth.interface';
 
 class UserRepository extends BaseRepository {
@@ -231,6 +236,9 @@ class UserRepository extends BaseRepository {
     const queryBuilder = UserReplicaModel.query().alias('user');
 
     // Apply filters
+    if (params.uid) {
+      queryBuilder.where('user.uid', params.uid);
+    }
     if (params.userId) {
       queryBuilder.where('user.id', params.userId);
     }
@@ -286,6 +294,77 @@ class UserRepository extends BaseRepository {
     return await UserModel.query()
       .patch(data)
       .where('uid', uid);
+  }
+
+  async getTotalUsers(
+    status?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<number> {
+    const queryBuilder = UserReplicaModel.query();
+
+    if (status) queryBuilder.where('status', status);
+    if (startDate) queryBuilder.where('createdAt', '>=', startDate);
+    if (endDate) queryBuilder.where('createdAt', '<=', endDate);
+
+    queryBuilder.where('roleId', 3); // get users only
+
+    return await queryBuilder.resultSize();
+  }
+
+  async getAllUsers(
+    status?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<Array<UserModel>> {
+    const queryBuilder = UserReplicaModel.query();
+
+    if (status) {
+      queryBuilder.where('status', status);
+    }
+
+    if (startDate) {
+      queryBuilder.where('createdAt', '>=', startDate);
+    }
+
+    if (endDate) {
+      queryBuilder.where('createdAt', '<=', endDate);
+    }
+
+    queryBuilder.where('roleId', 3); // get users only
+
+    return await queryBuilder;
+  }
+
+  async getLatestUsers(limit: number): Promise<UserModel[]> {
+    return await UserReplicaModel.query()
+      .where('roleId', 3) // users only
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+  }
+
+  async getUsersGrowthByMonth(
+    startDate: string,
+    endDate: string
+  ): Promise<Array<{ month: string; count: number }>> {
+    const result = await UserReplicaModel.query()
+      .select(
+        UserReplicaModel.raw(`TO_CHAR(created_at, 'MM/YYYY') as month`),
+        UserReplicaModel.raw('COUNT(*) as count')
+      )
+      .where('roleId', 3) // users only
+      .andWhere('status', UserStatus.Active)
+      .whereBetween('createdAt', [startDate, endDate])
+      .groupByRaw(`TO_CHAR(created_at, 'MM/YYYY')`)
+      .orderByRaw(`MIN(created_at)`) as {
+        month?: string;
+        count?: string;
+      }[];
+
+    return result.map((row) => ({
+      month: row.month || '',
+      count: parseInt(row.count || '0', 10),
+    }));
   }
 }
 

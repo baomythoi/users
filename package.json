@@ -1,9 +1,9 @@
 {
-  "name": "users",
+  "name": "user",
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "npx tsc --project tsconfig.json && npx tsc-alias -p tsconfig.json",
     "start": "node ./acme/src/index.js",
     "dev": "nodemon --watch 'src/**/*.ts' -r ts-node ./src/index.ts",
     "lint": "eslint src --ext .ts",
@@ -22,6 +22,7 @@
     "@fastify/jwt": "^7.0.0",
     "@fastify/rate-limit": "^8.0.1",
     "@fastify/static": "^6.10.2",
+    "@types/amqplib": "^0.10.1",
     "@types/bcrypt": "^5.0.2",
     "@types/moment": "^2.13.0",
     "ajv": "^8.16.0",
@@ -42,6 +43,7 @@
     "pino-pretty": "^11.2.1",
     "redis": "^4.7.0",
     "sharp": "^0.34.1",
+    "typescript": "^5.1.3",
     "tsc-alias": "^1.8.10"
   },
   "devDependencies": {
