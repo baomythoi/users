@@ -236,6 +236,9 @@ class UserRepository extends BaseRepository {
     const queryBuilder = UserReplicaModel.query().alias('user');
 
     // Apply filters
+    if (params.uid) {
+      queryBuilder.where('user.uid', params.uid);
+    }
     if (params.userId) {
       queryBuilder.where('user.id', params.userId);
     }
