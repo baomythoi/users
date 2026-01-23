@@ -125,6 +125,12 @@ class UserProfile extends BaseService {
           status: 2,
           locale: params.locale || 'en',
           createdAt: BaseCommon.moment.init().format(),
+          avatar: params.avatar || '',
+          firstName: params.firstName,
+          lastName: params.lastName,
+          middleName: params.middleName || '',
+          phoneCode: params.phoneCode,
+          gender: 1,
         }, trx);
 
         // Update extraInfo using repository

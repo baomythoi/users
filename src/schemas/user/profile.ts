@@ -93,6 +93,7 @@ export const RegGSaleAccountSchema: JSONSchemaType<RegGSaleAccountParams> = {
     lastName: { type: 'string', minLength: 1, maxLength: 255 },
     middleName: { type: 'string', minLength: 1, maxLength: 255, nullable: true },
     phoneCode: { type: 'string', minLength: 1, maxLength: 5 },
+    avatar: { type: 'string', nullable: true },
   },
   additionalProperties: false
 }
