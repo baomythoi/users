@@ -132,6 +132,7 @@ export interface RegGSaleAccountParams {
   phoneCode: string;
   phoneNumber: string;
   locale: string;
+  avatar?: string;
 }
 
 export interface UserDailyRevenueData {
