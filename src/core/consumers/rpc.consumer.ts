@@ -11,6 +11,7 @@ import { RequestParams } from '@interfaces/rabbitmq';
 // rpc
 const RPC_EXCHANGE = 'rpc.service.users.exchange';
 const RPC_QUEUE = 'rpc.service.users.queue';
+const RPC_HANDLER_TIMEOUT = 30_000; // 30s timeout for RPC handlers
 const RPC_HANDLERS = [
   UserRPC,
   StatisticRPC,
@@ -36,7 +37,6 @@ export default class RPCConsumer {
       arguments: {
         'x-queue-type': 'quorum',
         'x-message-ttl': 60_000, // Optional: keep message in queue 60s before send to dlq
-        'x-expires': 300_000, // Auto-delete queue after 5 minutes of inactivity
       },
     });
 
@@ -57,9 +57,18 @@ export default class RPCConsumer {
       if (!message) return;
 
       const routingKey = message.fields.routingKey;
-      const request: RequestParams = JSON.parse(message.content.toString());
       const { correlationId, replyTo } = message.properties;
-      let result;
+
+      /** Parse message safely */
+      let request: RequestParams;
+      try {
+        request = JSON.parse(message.content.toString());
+      } catch {
+        BaseCommon.logger.error(`Malformed RPC message, discarding. routingKey: ${routingKey}`);
+        return this.channelWrapper.ack(message);
+      }
+
+      let result: Record<string, unknown>;
 
       /** get handler process message */
       const handler = RPC_HANDLERS.find((_handler) => {
@@ -69,19 +78,30 @@ export default class RPCConsumer {
         return this.channelWrapper.ack(message);
 
       try {
-        result = await handler.processMessage(routingKey, request);
-        result.correlationId = correlationId;
-        this.channelWrapper.sendToQueue(replyTo, Buffer.from(JSON.stringify(result)), { correlationId });
+        /** Handler with timeout to prevent channel blocking */
+        const handlerResult = await Promise.race([
+          handler.processMessage(routingKey, request),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`RPC handler timeout after ${RPC_HANDLER_TIMEOUT}ms`)), RPC_HANDLER_TIMEOUT)
+          ),
+        ]) as Record<string, unknown>;
+        result = { ...handlerResult, correlationId };
+
+        if (replyTo) {
+          this.channelWrapper.sendToQueue(replyTo, Buffer.from(JSON.stringify(result)), { correlationId });
+        }
         this.channelWrapper.ack(message);
       } catch (error: any) {
-        this.channelWrapper.sendToQueue(replyTo, Buffer.from(JSON.stringify({
+        const errorResponse = {
           statusCode: error?.code || 500,
           code: 'users_exception',
           success: false,
           message: error?.message || 'Unknown error occurred',
-          error
-        })), { correlationId });
+        };
 
+        if (replyTo) {
+          this.channelWrapper.sendToQueue(replyTo, Buffer.from(JSON.stringify(errorResponse)), { correlationId });
+        }
         this.channelWrapper.ack(message);
 
         result = {
@@ -93,17 +113,6 @@ export default class RPCConsumer {
           }
         }
       }
-
-      /** mq logger */
-      BaseCommon.mqLogger({
-        service: 'users_rpc_consumer',
-        correlationId,
-        queue: this.queue,
-        routingKey,
-        request: request.params,
-        response: result,
-        status: result?.success ? 'success' : 'fail'
-      })
     });
   }
 }

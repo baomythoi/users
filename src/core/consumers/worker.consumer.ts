@@ -9,6 +9,9 @@ import { RequestParams } from '@interfaces/rabbitmq';
 
 const WORKER_EXCHANGE = 'worker.service.users.exchange';
 const WORKER_QUEUE = 'worker.service.users.queue';
+const WORKER_DLX_EXCHANGE = 'worker.service.users.dlx.exchange';
+const WORKER_DLQ = 'worker.service.users.dlq';
+const MAX_RETRIES = 3;
 const WORKER_HANDLERS = [
   UsersWorker,
 ];
@@ -26,14 +29,24 @@ export default class WorkerConsumer {
       durable: true,
     });
 
+    /** Dead Letter Exchange & Queue for failed messages */
+    await this.channelWrapper.assertExchange(WORKER_DLX_EXCHANGE, 'fanout', {
+      durable: true,
+    });
+    await this.channelWrapper.assertQueue(WORKER_DLQ, {
+      durable: true,
+      autoDelete: false,
+    });
+    await this.channelWrapper.bindQueue(WORKER_DLQ, WORKER_DLX_EXCHANGE, '');
+
     /** Queue */
     await this.channelWrapper.assertQueue(this.workerQueue, {
       durable: true,
       autoDelete: false,
       arguments: {
         'x-queue-type': 'quorum',
-        'x-message-ttl': 60_000, // Optional: keep message in queue 60s before send to dlq
-        'x-expires': 300_000, // Auto-delete queue after 5 minutes of inactivity
+        'x-message-ttl': 300_000,
+        'x-dead-letter-exchange': WORKER_DLX_EXCHANGE,
       },
     });
 
@@ -54,9 +67,16 @@ export default class WorkerConsumer {
       if (!message) return;
 
       const routingKey = message.fields.routingKey;
-      const request: RequestParams = JSON.parse(message.content.toString());
       const { correlationId } = message.properties;
-      let result;
+
+      /** Parse message safely */
+      let request: RequestParams;
+      try {
+        request = JSON.parse(message.content.toString());
+      } catch {
+        BaseCommon.logger.error(`Malformed worker message, discarding. routingKey: ${routingKey}`);
+        return this.channelWrapper.ack(message);
+      }
 
       /** get handler process message */
       const handler = WORKER_HANDLERS.find((_handler) => {
@@ -66,28 +86,38 @@ export default class WorkerConsumer {
         return this.channelWrapper.ack(message);
 
       try {
-        result = await handler.processMessage(routingKey, request);
+        await handler.processMessage(routingKey, request);
         this.channelWrapper.ack(message);
       } catch (error: any) {
-        this.channelWrapper.ack(message);
+        /** Retry logic: requeue if under max retries, otherwise ack (goes to DLQ via nack) */
+        const retryCount = (message.properties.headers?.['x-retry-count'] || 0) as number;
 
-        result = {
-          success: false,
-          message: error?.message,
-          stack: error?.stack
+        if (retryCount < MAX_RETRIES) {
+          // Requeue with incremented retry count
+          this.channelWrapper.publish(
+            this.workerExchange,
+            routingKey,
+            message.content,
+            {
+              correlationId,
+              headers: { 'x-retry-count': retryCount + 1 },
+              persistent: true,
+            }
+          );
+          this.channelWrapper.ack(message);
+
+          BaseCommon.logger.warn(
+            `Worker retry ${retryCount + 1}/${MAX_RETRIES} for ${routingKey}: ${error?.message}`
+          );
+        } else {
+          // Max retries exceeded → nack to DLQ
+          this.channelWrapper.nack(message, false, false);
+
+          BaseCommon.logger.error(
+            `Worker max retries exceeded for ${routingKey}, sent to DLQ: ${error?.message}`
+          );
         }
       }
-
-      /** mq logger */
-      BaseCommon.mqLogger({
-        service: 'chatbot',
-        correlationId,
-        queue: this.workerQueue,
-        routingKey,
-        request: request.params,
-        response: result,
-        status: result.success ? 'success' : 'fail'
-      })
     });
   }
 }
