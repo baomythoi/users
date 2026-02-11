@@ -11,6 +11,12 @@ interface ConsumerConfig {
   prefetchCount: number;
 }
 
+
+/**
+ * Consumer configuration
+ * - RPC: Handles synchronous request/response from API gateway (low prefetch for fast response)
+ * - WORKER: Handles background tasks like webhook, email, etc. (low prefetch for reliability)
+ */
 const CONSUMERS = {
   RPC: {
     name: 'users_rpc',
@@ -26,6 +32,7 @@ const CONSUMERS = {
 
 export default class RabbitMQService {
   private channels: Map<string, Channel> = new Map();
+  private isInitialized = false;
 
   private consumers: ConsumerConfig[] =
     Object.values(CONSUMERS).map(consumer => ({
@@ -47,46 +54,68 @@ export default class RabbitMQService {
   connect = async (): Promise<void> => {
     try {
       await BaseCommon.rabbitmq.connect();
-      BaseCommon.logger.info('RabbitMQ connected successfully');
+      BaseCommon.logger.info('RabbitMQ connected successfully ✓');
     } catch (error) {
-      BaseCommon.logger.error('RabbitMQ connection failed');
+      BaseCommon.logger.error('RabbitMQ connection failed ✘');
       throw error;
     }
   }
 
   init = async (): Promise<void> => {
     try {
+      // Cleanup old channels before re-initializing (on reconnect)
+      if (this.isInitialized) {
+        await this.cleanupChannels();
+      }
+
       for (const config of this.consumers) {
-        const channel = await BaseCommon.rabbitmq.getChannel();
+        // Create a DEDICATED channel for each consumer — isolated prefetch & error handling
+        const channel = await BaseCommon.rabbitmq.createChannel();
 
         await channel.prefetch(config.prefetchCount);
 
         channel.on('error', (err) => {
-          BaseCommon.logger.error(`Channel error for ${config.name}`, err);
+          BaseCommon.logger.error(`Channel error for ${config.name} ✘`, err);
         });
         
         channel.on('close', () => {
-          BaseCommon.logger.warn(`Channel closed for ${config.name}`);
+          BaseCommon.logger.warn(`Channel closed for ${config.name} ✘`);
           this.channels.delete(config.name);
         });
 
         this.channels.set(config.name, channel);
 
-
         await config.instance.initConsumer(channel);
         
         BaseCommon.logger.info(
-          `Consumer ${config.name} initialized`
+          `Consumer ${config.name} initialized (prefetch: ${config.prefetchCount}) ✓`,
         );
       }
+
+      this.isInitialized = true;
     } catch (error) {
-      BaseCommon.logger.error('RabbitMQ initialization failed', error);
+      BaseCommon.logger.error('RabbitMQ initialization failed ✘', error);
       throw error;
     }
   }
 
+  /**
+   * Cleanup existing channels before reconnect to prevent memory leaks
+   */
+  private cleanupChannels = async (): Promise<void> => {
+    for (const [name, channel] of this.channels) {
+      try {
+        await channel.close();
+      } catch {
+        // Channel may already be closed during disconnect
+      }
+      BaseCommon.logger.info(`Cleaned up old channel: ${name}`);
+    }
+    this.channels.clear();
+  }
+
   private handleDisconnect = (): void => {
-    BaseCommon.logger.warn('RabbitMQ disconnected, clearing channels');
+    BaseCommon.logger.warn('RabbitMQ disconnected ✘, clearing channels');
     this.channels.clear();
   }
 
@@ -112,19 +141,20 @@ export default class RabbitMQService {
       for (const [name, channel] of this.channels) {
         try {
           await channel.close();
-          BaseCommon.logger.info(`Channel ${name} closed`);
+          BaseCommon.logger.info(`Channel ${name} closed ✓`);
         } catch (error) {
-          BaseCommon.logger.error(`Error closing channel ${name}`, error);
+          BaseCommon.logger.error(`Error closing channel ${name} ✘`, error);
         }
       }
 
       this.channels.clear();
+      this.isInitialized = false;
 
       // Then close connection
       await BaseCommon.rabbitmq.closeConnection();
-      BaseCommon.logger.info('RabbitMQ connection closed');
+      BaseCommon.logger.info('RabbitMQ connection closed ✓');
     } catch (error) {
-      BaseCommon.logger.error('Error closing RabbitMQ', error);
+      BaseCommon.logger.error('Error closing RabbitMQ ✘', error);
       throw error;
     }
   }
